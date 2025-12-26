@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thinking Music</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --void: #080808;
+            --fog: rgba(250, 248, 244, 0.015);
+            --whisper: rgba(250, 248, 244, 0.04);
+            --murmur: rgba(250, 248, 244, 0.10);
+            --voice: rgba(250, 248, 244, 0.30);
+            --speak: rgba(250, 248, 244, 0.55);
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--void);
+            font-family: 'EB Garamond', serif;
+            cursor: none;
+        }
+        
+        .field {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .thought {
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .thought-chord {
+            font-size: 1.8rem;
+            font-weight: 400;
+            font-style: italic;
+            color: var(--voice);
+            letter-spacing: 0.1em;
+            opacity: 0;
+            animation: emerge 26s ease-in-out forwards;
+        }
+        
+        .breath {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60vmax;
+            height: 60vmax;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--fog) 0%, transparent 60%);
+            animation: breathe 12s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        .center {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .center-chord {
+            font-size: 5rem;
+            font-weight: 400;
+            font-style: italic;
+            color: var(--speak);
+            letter-spacing: 0.04em;
+            opacity: 0;
+            animation: center-emerge 6s ease-out forwards;
+        }
+        
+        .wave {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid var(--whisper);
+            pointer-events: none;
+            animation: ripple 10s ease-out forwards;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: var(--murmur);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-drift 30s linear infinite;
+        }
+        
+        .horizon {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                var(--fog) 35%, 
+                var(--whisper) 50%, 
+                var(--fog) 65%, 
+                transparent 100%
+            );
+            pointer-events: none;
+            opacity: 0.4;
+        }
+        
+        @keyframes emerge {
+            0% { opacity: 0; transform: translateY(12px); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-12px); }
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+            50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.5; }
+        }
+        
+        @keyframes center-emerge {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes center-fade {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 0.3; }
+            100% { width: 100vmax; height: 100vmax; opacity: 0; }
+        }
+        
+        @keyframes particle-drift {
+            0% { transform: translateY(100vh); opacity: 0; }
+            5% { opacity: 0.5; }
+            95% { opacity: 0.5; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="field" id="field">
+        <div class="breath"></div>
+        <div class="horizon"></div>
+        
+        <div class="center" id="center">
+            <div class="center-chord" id="centerChord"></div>
+        </div>
+    </div>
+    
+    <script>
+        let audioCtx = null;
+        let masterGain = null;
+        let audioInitialized = false;
+        
+        const noteFrequencies = {
+            'C': 261.63, 'C♯': 277.18, 'D♭': 277.18,
+            'D': 293.66, 'D♯': 311.13, 'E♭': 311.13,
+            'E': 329.63,
+            'F': 349.23, 'F♯': 369.99, 'G♭': 369.99,
+            'G': 392.00, 'G♯': 415.30, 'A♭': 415.30,
+            'A': 440.00, 'A♯': 466.16, 'B♭': 466.16,
+            'B': 493.88
+        };
+        
+        const chordIntervals = {
+            '': [0, 4, 7],
+            'm': [0, 3, 7],
+            '7': [0, 4, 7, 10],
+            'maj7': [0, 4, 7, 11],
+            'm7': [0, 3, 7, 10],
+            'dim': [0, 3, 6],
+            'sus4': [0, 5, 7],
+            '6': [0, 4, 7, 9],
+            'm6': [0, 3, 7, 9],
+            'add9': [0, 4, 7, 14],
+            'm9': [0, 3, 7, 10, 14],
+            'maj9': [0, 4, 7, 11, 14],
+        };
+        
+        function initAudio() {
+            if (audioInitialized) return;
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.22;
+            
+            const reverbNode = audioCtx.createConvolver();
+            const reverbTime = 6;
+            const sampleRate = audioCtx.sampleRate;
+            const length = sampleRate * reverbTime;
+            const impulse = audioCtx.createBuffer(2, length, sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 1.3);
+                }
+            }
+            reverbNode.buffer = impulse;
+            
+            const dryGain = audioCtx.createGain();
+            dryGain.gain.value = 0.35;
+            
+            const wetGain = audioCtx.createGain();
+            wetGain.gain.value = 0.65;
+            
+            masterGain.connect(dryGain);
+            masterGain.connect(reverbNode);
+            reverbNode.connect(wetGain);
+            dryGain.connect(audioCtx.destination);
+            wetGain.connect(audioCtx.destination);
+            
+            audioInitialized = true;
+        }
+        
+        function getFrequency(note, octave = 4) {
+            const baseFreq = noteFrequencies[note];
+            if (!baseFreq) return 440;
+            return baseFreq * Math.pow(2, octave - 4);
+        }
+        
+        function semitoneToFrequency(baseFreq, semitones) {
+            return baseFreq * Math.pow(2, semitones / 12);
+        }
+        
+        function playChord(chordName, options = {}) {
+            if (!audioInitialized) return;
+            
+            const {
+                volume = 0.12,
+                pan = 0,
+                octave = 3,
+                attackTime = 4,
+                sustainTime = 6,
+                releaseTime = 6,
+            } = options;
+            
+            let root = chordName[0];
+            let quality = '';
+            let restIndex = 1;
+            
+            if (chordName[1] === '♯' || chordName[1] === '♭') {
+                root += chordName[1];
+                restIndex = 2;
+            }
+            
+            quality = chordName.slice(restIndex);
+            
+            const intervals = chordIntervals[quality] || chordIntervals[''];
+            const baseFreq = getFrequency(root, octave);
+            
+            const panner = audioCtx.createStereoPanner();
+            panner.pan.value = pan;
+            panner.connect(masterGain);
+            
+            const now = audioCtx.currentTime;
+            
+            intervals.forEach((interval) => {
+                const freq = semitoneToFrequency(baseFreq, interval);
+                
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq + (Math.random() - 0.5) * 0.2;
+                
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0;
+                
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume / intervals.length, now + attackTime);
+                gain.gain.setValueAtTime(volume / intervals.length, now + attackTime + sustainTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + attackTime + sustainTime + releaseTime);
+                
+                osc.connect(gain);
+                gain.connect(panner);
+                
+                osc.start(now);
+                osc.stop(now + attackTime + sustainTime + releaseTime + 0.5);
+            });
+        }
+        
+        const field = document.getElementById('field');
+        
+        const notes = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+        const modes = ['ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
+        const qualities = ['', 'm', 'maj7', 'm7', 'sus4', '6', 'add9'];
+        
+        let state = {
+            key: 'D',
+            mode: 'dorian',
+            density: 0.008,
+            drift: 0.012,
+            lastChange: Date.now()
+        };
+        
+        function weightedRandom(items, weights) {
+            const total = weights.reduce((a, b) => a + b, 0);
+            let random = Math.random() * total;
+            for (let i = 0; i < items.length; i++) {
+                random -= weights[i];
+                if (random <= 0) return items[i];
+            }
+            return items[items.length - 1];
+        }
+        
+        function generateChord() {
+            const keyIndex = notes.indexOf(state.key);
+            
+            const scaleWeights = {
+                'dorian': [3, 2, 1, 2, 3, 1, 0.5],
+                'ionian': [3, 1, 1, 2, 3, 1, 0.5],
+                'mixolydian': [3, 1, 1, 2, 3, 1, 1],
+                'lydian': [3, 1, 1, 3, 2, 1, 0.5],
+                'aeolian': [3, 2, 1, 2, 2, 2, 0.5],
+                'phrygian': [3, 2, 1, 2, 2, 2, 1],
+                'locrian': [2, 2, 1, 2, 2, 2, 1]
+            };
+            
+            const weights = scaleWeights[state.mode] || scaleWeights['dorian'];
+            const degreeIndex = weightedRandom([0, 1, 2, 3, 4, 5, 6], weights);
+            
+            const modeIntervals = {
+                'dorian': [0, 2, 3, 5, 7, 9, 10],
+                'ionian': [0, 2, 4, 5, 7, 9, 11],
+                'mixolydian': [0, 2, 4, 5, 7, 9, 10],
+                'lydian': [0, 2, 4, 6, 7, 9, 11],
+                'aeolian': [0, 2, 3, 5, 7, 8, 10],
+                'phrygian': [0, 1, 3, 5, 7, 8, 10],
+                'locrian': [0, 1, 3, 5, 6, 8, 10]
+            };
+            
+            const interval = modeIntervals[state.mode][degreeIndex];
+            const noteIndex = (keyIndex + interval) % 12;
+            const root = notes[noteIndex];
+            
+            const qualityWeights = [2, 2, 3, 3, 1, 1, 1];
+            const quality = weightedRandom(qualities, qualityWeights);
+            
+            return root + quality;
+        }
+        
+        function generateThought() {
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            const pan = (x / window.innerWidth) * 2 - 1;
+            
+            const thought = document.createElement('div');
+            thought.className = 'thought';
+            thought.style.left = x + 'px';
+            thought.style.top = y + 'px';
+            
+            const chord = generateChord();
+            thought.innerHTML = `<div class="thought-chord">${chord}</div>`;
+            
+            playChord(chord, {
+                volume: 0.04,
+                pan: pan * 0.9,
+                octave: 4,
+                attackTime: 5,
+                sustainTime: 14,
+                releaseTime: 8,
+            });
+            
+            field.appendChild(thought);
+            setTimeout(() => thought.remove(), 26000);
+        }
+        
+        function generateWave() {
+            const wave = document.createElement('div');
+            wave.className = 'wave';
+            field.appendChild(wave);
+            setTimeout(() => wave.remove(), 10000);
+        }
+        
+        function updateCenter() {
+            const chord = generateChord();
+            const centerChord = document.getElementById('centerChord');
+            
+            centerChord.style.animation = 'center-fade 3s ease-out forwards';
+            
+            setTimeout(() => {
+                centerChord.textContent = chord;
+                centerChord.style.animation = 'center-emerge 6s ease-out forwards';
+            }, 3000);
+            
+            playChord(chord, {
+                volume: 0.14,
+                pan: 0,
+                octave: 3,
+                attackTime: 4,
+                sustainTime: 8,
+                releaseTime: 7
+            });
+            
+            generateWave();
+        }
+        
+        function drift() {
+            if (Math.random() < state.drift) {
+                const currentIndex = notes.indexOf(state.key);
+                const movement = weightedRandom([-7, -5, -2, 0, 2, 5, 7], [1, 2, 2, 4, 2, 2, 1]);
+                const newIndex = (currentIndex + movement + 12) % 12;
+                state.key = notes[newIndex];
+            }
+            
+            if (Math.random() < state.drift * 0.4) {
+                const currentModeIndex = modes.indexOf(state.mode);
+                const movement = weightedRandom([-1, 0, 1], [1, 3, 1]);
+                const newModeIndex = (currentModeIndex + movement + 7) % 7;
+                state.mode = modes[newModeIndex];
+            }
+        }
+        
+        function generateParticles(count = 8) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 30 + 's';
+                particle.style.animationDuration = (25 + Math.random() * 15) + 's';
+                field.appendChild(particle);
+            }
+        }
+        
+        function generativeLoop() {
+            if (Math.random() < state.density) {
+                generateThought();
+            }
+            
+            if (Date.now() - state.lastChange > 16000 + Math.random() * 22000) {
+                updateCenter();
+                state.lastChange = Date.now();
+            }
+            
+            if (Math.random() < 0.006) {
+                drift();
+            }
+            
+            requestAnimationFrame(generativeLoop);
+        }
+        
+        let started = false;
+        
+        field.addEventListener('click', (e) => {
+            initAudio();
+            
+            if (!started) {
+                started = true;
+                updateCenter();
+                state.lastChange = Date.now();
+                return;
+            }
+            
+            const x = e.clientX + (Math.random() - 0.5) * 80;
+            const y = e.clientY + (Math.random() - 0.5) * 80;
+            const pan = (x / window.innerWidth) * 2 - 1;
+            
+            const thought = document.createElement('div');
+            thought.className = 'thought';
+            thought.style.left = x + 'px';
+            thought.style.top = y + 'px';
+            
+            const chord = generateChord();
+            thought.innerHTML = `<div class="thought-chord">${chord}</div>`;
+            
+            playChord(chord, {
+                volume: 0.055,
+                pan: pan * 0.8,
+                octave: 4,
+                attackTime: 3,
+                sustainTime: 12,
+                releaseTime: 7
+            });
+            
+            field.appendChild(thought);
+            setTimeout(() => thought.remove(), 26000);
+            
+            updateCenter();
+            state.lastChange = Date.now();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (!started) {
+                initAudio();
+                started = true;
+                updateCenter();
+                state.lastChange = Date.now();
+            }
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                updateCenter();
+                state.lastChange = Date.now();
+            }
+            
+            const modeKeys = {'d': 'dorian', 'i': 'ionian', 'l': 'lydian', 'm': 'mixolydian', 'a': 'aeolian', 'p': 'phrygian'};
+            if (modeKeys[e.key.toLowerCase()]) {
+                state.mode = modeKeys[e.key.toLowerCase()];
+            }
+            
+            const noteKey = e.key.toUpperCase();
+            if (['C', 'D', 'E', 'F', 'G', 'A', 'B'].includes(noteKey)) {
+                state.key = noteKey;
+            }
+        });
+        
+        generateParticles(8);
+        generativeLoop();
+    </script>
+</body>
+</html>
