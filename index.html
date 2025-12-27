@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Generative ambient music for thinking. An audiovisual meditation.">
+    <meta name="theme-color" content="#080808">
+    <meta property="og:title" content="Thinking Music">
+    <meta property="og:description" content="Generative ambient music for thinking. An audiovisual meditation.">
+    <meta property="og:type" content="website">
     <title>Thinking Music</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='none' stroke='%23faf8f4' stroke-width='2' opacity='0.3'/></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&display=swap');
         
@@ -27,8 +33,17 @@
             height: 100%;
             overflow: hidden;
             background: var(--void);
-            font-family: 'EB Garamond', serif;
+            font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
             cursor: none;
+        }
+
+        /* Respect reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
         
         .field {
@@ -52,7 +67,7 @@
             color: var(--voice);
             letter-spacing: 0.1em;
             opacity: 0;
-            animation: emerge 26s ease-in-out forwards;
+            animation: emerge 42s ease-in-out forwards;
         }
         
         .breath {
@@ -79,13 +94,140 @@
         }
         
         .center-chord {
-            font-size: 5rem;
+            font-size: 7.5rem;
             font-weight: 400;
             font-style: italic;
             color: var(--speak);
             letter-spacing: 0.04em;
             opacity: 0;
             animation: center-emerge 6s ease-out forwards;
+            transition: letter-spacing 0.5s ease, transform 0.5s ease;
+        }
+
+        .center-chord.swell {
+            animation: center-swell 8s ease-in-out infinite;
+        }
+
+        /* Expressive typography for chord types */
+        .center-chord.chord-maj7 {
+            letter-spacing: 0.08em;
+            font-weight: 300;
+        }
+
+        .center-chord.chord-m7 {
+            letter-spacing: 0.02em;
+            opacity: 0.9;
+        }
+
+        .center-chord.chord-dim {
+            animation: center-swell 8s ease-in-out infinite, tremble 0.15s ease-in-out infinite;
+        }
+
+        .center-chord.chord-sus4 {
+            letter-spacing: 0.12em;
+        }
+
+        .center-chord.chord-m {
+            font-style: italic;
+            opacity: 0.85;
+        }
+
+        /* Jazz voicing typography */
+        .center-chord.chord-alt {
+            animation: center-swell 8s ease-in-out infinite, unease 4s ease-in-out infinite;
+            letter-spacing: 0.01em;
+        }
+
+        .center-chord.chord-quartal {
+            letter-spacing: 0.18em;
+            font-weight: 300;
+        }
+
+        .center-chord.chord-halfdim {
+            opacity: 0.75;
+            font-style: italic;
+            letter-spacing: 0.03em;
+        }
+
+        .center-chord.chord-mmaj7 {
+            letter-spacing: -0.01em;
+            opacity: 0.9;
+        }
+
+        .center-chord.chord-13 {
+            letter-spacing: 0.06em;
+            font-weight: 300;
+        }
+
+        @keyframes unease {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            25% { transform: translate(-50%, -50%) rotate(0.3deg); }
+            75% { transform: translate(-50%, -50%) rotate(-0.3deg); }
+        }
+
+        /* Arrival state - when journey reaches home */
+        .field.arrived .breath {
+            animation: breathe-home 16s ease-in-out infinite;
+        }
+
+        @keyframes breathe-home {
+            0%, 100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.4; }
+            50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.6; }
+        }
+
+        /* Intro overlay */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            pointer-events: all;
+            cursor: pointer;
+            transition: opacity 2s ease;
+        }
+
+        .intro-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .intro-pulse {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--whisper) 0%, transparent 70%);
+            animation: intro-breathe 4s ease-in-out infinite;
+            margin-bottom: 40px;
+        }
+
+        .intro-text {
+            font-size: 1rem;
+            font-style: italic;
+            color: var(--murmur);
+            letter-spacing: 0.2em;
+            animation: intro-fade 3s ease-in-out infinite;
+        }
+
+        @keyframes intro-breathe {
+            0%, 100% { transform: scale(0.8); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+        }
+
+        @keyframes intro-fade {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes tremble {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-1px); }
+            75% { transform: translateX(1px); }
         }
         
         .wave {
@@ -115,22 +257,32 @@
             left: 0;
             width: 100%;
             height: 1px;
-            background: linear-gradient(90deg, 
-                transparent 0%, 
-                var(--fog) 35%, 
-                var(--whisper) 50%, 
-                var(--fog) 65%, 
+            background: linear-gradient(90deg,
+                transparent 0%,
+                var(--fog) 35%,
+                var(--whisper) 50%,
+                var(--fog) 65%,
                 transparent 100%
             );
             pointer-events: none;
             opacity: 0.4;
         }
+
+        #stringCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
         
         @keyframes emerge {
-            0% { opacity: 0; transform: translateY(12px); }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-12px); }
+            0% { opacity: 0; transform: translateY(18px); }
+            8% { opacity: 0.7; }
+            92% { opacity: 0.7; }
+            100% { opacity: 0; transform: translateY(-18px); }
         }
         
         @keyframes breathe {
@@ -147,6 +299,11 @@
             0% { opacity: 1; }
             100% { opacity: 0; }
         }
+
+        @keyframes center-swell {
+            0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+        }
         
         @keyframes ripple {
             0% { width: 0; height: 0; opacity: 0.3; }
@@ -159,22 +316,187 @@
             95% { opacity: 0.5; }
             100% { transform: translateY(-100vh); opacity: 0; }
         }
+
+        /* Minimal winter dots instead of unicode snowflakes */
+        .snowflake {
+            position: fixed;
+            width: 2px;
+            height: 2px;
+            background: rgba(250, 248, 244, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 50;
+            box-shadow: 0 0 3px rgba(250, 248, 244, 0.3);
+            animation: snowfall linear forwards;
+        }
+
+        @keyframes snowfall {
+            0% {
+                transform: translateY(-10vh);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(110vh);
+                opacity: 0;
+            }
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            padding: 18px 36px;
+            background: rgba(8, 8, 8, 0.8);
+            border: 1px solid var(--whisper);
+            border-radius: 4px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            backdrop-filter: blur(12px);
+        }
+
+        .controls.visible {
+            opacity: 1;
+        }
+
+        .controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .text-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .text-control:hover {
+            opacity: 1;
+        }
+
+        .text-control .control-name {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: var(--murmur);
+            letter-spacing: 0.1em;
+            transition: color 0.3s ease;
+        }
+
+        .text-control.active .control-name {
+            color: var(--voice);
+        }
+
+        .text-control.inactive .control-name {
+            color: var(--whisper);
+            text-decoration: line-through;
+        }
+
+        .text-control .control-value {
+            font-size: 0.65rem;
+            color: var(--whisper);
+            letter-spacing: 0.05em;
+            font-style: italic;
+        }
+
+        .text-control .control-glow {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--murmur);
+            margin-top: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 rgba(250, 248, 244, 0);
+        }
+
+        .text-control .control-glow.bright {
+            background: var(--voice);
+            box-shadow: 0 0 12px rgba(250, 248, 244, 0.3);
+        }
+
+        .control-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--whisper);
+            opacity: 0.5;
+        }
+
+        .controls-hint {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-style: italic;
+            color: var(--murmur);
+            letter-spacing: 0.15em;
+            z-index: 99;
+            transition: opacity 0.6s ease;
+        }
     </style>
 </head>
 <body>
+    <!-- Intro overlay -->
+    <div class="intro-overlay" id="introOverlay">
+        <div class="intro-pulse"></div>
+        <div class="intro-text">begin</div>
+    </div>
+
+    <canvas id="stringCanvas"></canvas>
     <div class="field" id="field">
         <div class="breath"></div>
         <div class="horizon"></div>
-        
+
         <div class="center" id="center">
             <div class="center-chord" id="centerChord"></div>
+        </div>
+    </div>
+
+    <div class="controls-hint" id="controlsHint">esc for controls</div>
+    <div class="controls" id="controls">
+        <div class="text-control active" id="soundToggle">
+            <span class="control-name">sound</span>
+        </div>
+
+        <div class="control-divider"></div>
+
+        <div class="text-control active" id="volumeControl" data-value="60">
+            <span class="control-name">volume</span>
+            <div class="control-glow bright"></div>
+        </div>
+
+        <div class="text-control active" id="densityControl" data-value="40">
+            <span class="control-name">density</span>
+            <div class="control-glow"></div>
+        </div>
+
+        <div class="text-control active" id="reverbControl" data-value="65">
+            <span class="control-name">reverb</span>
+            <div class="control-glow bright"></div>
         </div>
     </div>
     
     <script>
         let audioCtx = null;
         let masterGain = null;
+        let centerGain = null;
+        let dryGain = null;
+        let wetGain = null;
         let audioInitialized = false;
+        let soundEnabled = true;
         
         const noteFrequencies = {
             'C': 261.63, 'C♯': 277.18, 'D♭': 277.18,
@@ -186,6 +508,7 @@
             'B': 493.88
         };
         
+        // Extended jazz vocabulary inspired by Kurt Rosenwinkel
         const chordIntervals = {
             '': [0, 4, 7],
             'm': [0, 3, 7],
@@ -199,22 +522,39 @@
             'add9': [0, 4, 7, 14],
             'm9': [0, 3, 7, 10, 14],
             'maj9': [0, 4, 7, 11, 14],
+            // Kurt Rosenwinkel voicings
+            '7♯9': [0, 4, 10, 15],          // Altered dominant - Hendrix chord
+            '7♭9': [0, 4, 10, 13],          // Altered dominant
+            '7alt': [0, 4, 8, 10, 15],      // Full altered scale sound
+            'm(maj7)': [0, 3, 7, 11],       // Minor major 7 - dark, sophisticated
+            '13': [0, 4, 7, 10, 14, 21],    // Full 13th voicing
+            'maj7♯11': [0, 4, 7, 11, 18],   // Lydian sound
+            'm11': [0, 3, 7, 10, 14, 17],   // Minor 11 - open, modal
+            '7sus4': [0, 5, 7, 10],         // Suspended dominant
+            'ø7': [0, 3, 6, 10],            // Half diminished
+            'maj7♯5': [0, 4, 8, 11],        // Augmented major 7
+            // Quartal voicings (stacked 4ths)
+            'Q': [0, 5, 10],                // Pure quartal
+            'Q7': [0, 5, 10, 15],           // Extended quartal
         };
         
         function initAudio() {
             if (audioInitialized) return;
-            
+
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
+
             masterGain = audioCtx.createGain();
             masterGain.gain.value = 0.22;
-            
+
+            centerGain = audioCtx.createGain();
+            centerGain.gain.value = 0.22;
+
             const reverbNode = audioCtx.createConvolver();
             const reverbTime = 6;
             const sampleRate = audioCtx.sampleRate;
             const length = sampleRate * reverbTime;
             const impulse = audioCtx.createBuffer(2, length, sampleRate);
-            
+
             for (let channel = 0; channel < 2; channel++) {
                 const channelData = impulse.getChannelData(channel);
                 for (let i = 0; i < length; i++) {
@@ -222,19 +562,21 @@
                 }
             }
             reverbNode.buffer = impulse;
-            
-            const dryGain = audioCtx.createGain();
+
+            dryGain = audioCtx.createGain();
             dryGain.gain.value = 0.35;
-            
-            const wetGain = audioCtx.createGain();
+
+            wetGain = audioCtx.createGain();
             wetGain.gain.value = 0.65;
-            
+
             masterGain.connect(dryGain);
             masterGain.connect(reverbNode);
+            centerGain.connect(dryGain);
+            centerGain.connect(reverbNode);
             reverbNode.connect(wetGain);
             dryGain.connect(audioCtx.destination);
             wetGain.connect(audioCtx.destination);
-            
+
             audioInitialized = true;
         }
         
@@ -248,9 +590,46 @@
             return baseFreq * Math.pow(2, semitones / 12);
         }
         
+        // Arrival pedal tone - a deep, sustained root note signaling home
+        function playPedalTone(rootNote) {
+            if (!audioInitialized || !soundEnabled) return;
+
+            const baseFreq = getFrequency(rootNote, 2); // Low octave
+            const now = audioCtx.currentTime;
+
+            // Create layered pedal: fundamental + octave + soft fifth
+            const frequencies = [
+                baseFreq,
+                baseFreq * 2,      // Octave
+                baseFreq * 1.5,    // Fifth (soft)
+            ];
+            const volumes = [0.08, 0.04, 0.02];
+
+            frequencies.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0;
+
+                // Very slow fade in, long sustain, gentle fade out
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volumes[i], now + 8);  // 8s fade in
+                gain.gain.setValueAtTime(volumes[i], now + 45);          // Hold until 45s
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 60); // Fade out by 60s
+
+                osc.connect(gain);
+                gain.connect(centerGain);
+
+                osc.start(now);
+                osc.stop(now + 61);
+            });
+        }
+
         function playChord(chordName, options = {}) {
-            if (!audioInitialized) return;
-            
+            if (!audioInitialized || !soundEnabled) return;
+
             const {
                 volume = 0.12,
                 pan = 0,
@@ -258,64 +637,356 @@
                 attackTime = 4,
                 sustainTime = 6,
                 releaseTime = 6,
+                isCenter = false,
+                swell = false,
             } = options;
-            
+
             let root = chordName[0];
             let quality = '';
             let restIndex = 1;
-            
+
             if (chordName[1] === '♯' || chordName[1] === '♭') {
                 root += chordName[1];
                 restIndex = 2;
             }
-            
+
             quality = chordName.slice(restIndex);
-            
+
             const intervals = chordIntervals[quality] || chordIntervals[''];
             const baseFreq = getFrequency(root, octave);
-            
+
             const panner = audioCtx.createStereoPanner();
             panner.pan.value = pan;
-            panner.connect(masterGain);
-            
+            panner.connect(isCenter ? centerGain : masterGain);
+
             const now = audioCtx.currentTime;
-            
+            const totalDuration = attackTime + sustainTime + releaseTime;
+
             intervals.forEach((interval) => {
                 const freq = semitoneToFrequency(baseFreq, interval);
-                
+
                 const osc = audioCtx.createOscillator();
                 osc.type = 'sine';
                 osc.frequency.value = freq + (Math.random() - 0.5) * 0.2;
-                
+
                 const gain = audioCtx.createGain();
                 gain.gain.value = 0;
-                
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(volume / intervals.length, now + attackTime);
-                gain.gain.setValueAtTime(volume / intervals.length, now + attackTime + sustainTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + attackTime + sustainTime + releaseTime);
-                
+
+                const peakVol = volume / intervals.length;
+
+                if (swell) {
+                    // Swell: rise to peak, hold with gentle pulse, then fade
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(peakVol * 0.7, now + attackTime * 0.5);
+                    gain.gain.linearRampToValueAtTime(peakVol, now + attackTime);
+                    gain.gain.setValueAtTime(peakVol, now + attackTime + sustainTime * 0.3);
+                    gain.gain.linearRampToValueAtTime(peakVol * 1.15, now + attackTime + sustainTime * 0.6);
+                    gain.gain.linearRampToValueAtTime(peakVol * 0.9, now + attackTime + sustainTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + totalDuration);
+                } else {
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(peakVol, now + attackTime);
+                    gain.gain.setValueAtTime(peakVol, now + attackTime + sustainTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + totalDuration);
+                }
+
                 osc.connect(gain);
                 gain.connect(panner);
-                
+
                 osc.start(now);
-                osc.stop(now + attackTime + sustainTime + releaseTime + 0.5);
+                osc.stop(now + totalDuration + 0.5);
             });
         }
         
         const field = document.getElementById('field');
-        
+
+        // String Art System
+        const stringCanvas = document.getElementById('stringCanvas');
+        const stringCtx = stringCanvas.getContext('2d');
+        let thoughtPositions = [];
+        let bezierCurves = [];
+
+        function resizeCanvas() {
+            stringCanvas.width = window.innerWidth;
+            stringCanvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function getCenterPosition() {
+            return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        }
+
+        // Generate flowing Bézier curves
+        function createBezierCurve() {
+            const side = Math.floor(Math.random() * 4);
+            let startX, startY, endX, endY;
+
+            if (side === 0) { startX = Math.random() * window.innerWidth; startY = -20; }
+            else if (side === 1) { startX = window.innerWidth + 20; startY = Math.random() * window.innerHeight; }
+            else if (side === 2) { startX = Math.random() * window.innerWidth; startY = window.innerHeight + 20; }
+            else { startX = -20; startY = Math.random() * window.innerHeight; }
+
+            const oppSide = (side + 2) % 4;
+            if (oppSide === 0) { endX = Math.random() * window.innerWidth; endY = -20; }
+            else if (oppSide === 1) { endX = window.innerWidth + 20; endY = Math.random() * window.innerHeight; }
+            else if (oppSide === 2) { endX = Math.random() * window.innerWidth; endY = window.innerHeight + 20; }
+            else { endX = -20; endY = Math.random() * window.innerHeight; }
+
+            return {
+                start: { x: startX, y: startY },
+                end: { x: endX, y: endY },
+                cp1: {
+                    x: window.innerWidth * (0.2 + Math.random() * 0.6),
+                    y: window.innerHeight * (0.2 + Math.random() * 0.6)
+                },
+                cp2: {
+                    x: window.innerWidth * (0.2 + Math.random() * 0.6),
+                    y: window.innerHeight * (0.2 + Math.random() * 0.6)
+                },
+                progress: 0,
+                speed: 0.002 + Math.random() * 0.003,
+                opacity: 0.03 + Math.random() * 0.05,
+                width: 0.5 + Math.random() * 1,
+                phaseOffset: Math.random() * Math.PI * 2  // Individual breath phase
+            };
+        }
+
+        // Initialize some curves
+        for (let i = 0; i < 5; i++) {
+            bezierCurves.push(createBezierCurve());
+        }
+
+        let stringBreathPhase = 0;
+
+        function drawStringArt() {
+            stringCtx.clearRect(0, 0, stringCanvas.width, stringCanvas.height);
+            const center = getCenterPosition();
+
+            // Breathing rhythm for strings
+            stringBreathPhase += 0.015;
+            const breath = 0.7 + Math.sin(stringBreathPhase) * 0.3;
+
+            // 1. Web threads from center to thoughts
+            drawWebThreads(center, breath);
+
+            // 2. Constellation lines between nearby thoughts
+            drawConstellationLines(breath);
+
+            // 3. Flowing Bézier curves
+            drawBezierCurves(breath);
+
+            requestAnimationFrame(drawStringArt);
+        }
+
+        function drawWebThreads(center, globalBreath = 1) {
+            thoughtPositions.forEach((thought, index) => {
+                if (!thought.active) return;
+
+                const age = (Date.now() - thought.born) / thought.lifespan;
+                const baseOpacity = Math.sin(age * Math.PI) * presenceGlow;
+
+                if (baseOpacity <= 0) return;
+
+                // Individual breath rhythm, slower when idle
+                const breathSpeed = 0.7 + state.presence * 0.3;
+                const breath = 0.7 + Math.sin(stringBreathPhase * breathSpeed + thought.phaseOffset) * 0.3;
+
+                const midX = (center.x + thought.x) / 2;
+                const midY = (center.y + thought.y) / 2;
+
+                // Outer glow with breathing
+                const glowGradient = stringCtx.createLinearGradient(center.x, center.y, thought.x, thought.y);
+                glowGradient.addColorStop(0, `rgba(255, 255, 255, ${baseOpacity * 0.2 * breath})`);
+                glowGradient.addColorStop(0.5, `rgba(255, 252, 248, ${baseOpacity * 0.1 * breath})`);
+                glowGradient.addColorStop(1, `rgba(255, 252, 248, ${baseOpacity * 0.05})`);
+
+                stringCtx.beginPath();
+                stringCtx.moveTo(center.x, center.y);
+                stringCtx.quadraticCurveTo(midX, midY, thought.x, thought.y);
+                stringCtx.strokeStyle = glowGradient;
+                stringCtx.lineWidth = 3 + breath * 2;
+                stringCtx.stroke();
+
+                // Bright core with breathing thickness
+                const coreGradient = stringCtx.createLinearGradient(center.x, center.y, thought.x, thought.y);
+                coreGradient.addColorStop(0, `rgba(255, 255, 255, ${baseOpacity * 0.4 * breath})`);
+                coreGradient.addColorStop(0.5, `rgba(255, 252, 248, ${baseOpacity * 0.25 * breath})`);
+                coreGradient.addColorStop(1, `rgba(255, 252, 248, ${baseOpacity * 0.1})`);
+
+                stringCtx.beginPath();
+                stringCtx.moveTo(center.x, center.y);
+                stringCtx.quadraticCurveTo(midX, midY, thought.x, thought.y);
+                stringCtx.strokeStyle = coreGradient;
+                stringCtx.lineWidth = 1 + breath * 0.8;
+                stringCtx.stroke();
+            });
+        }
+
+        function drawConstellationLines(globalBreath = 1) {
+            const activeThoughts = thoughtPositions.filter(t => t.active);
+            const maxDist = 300;
+
+            for (let i = 0; i < activeThoughts.length; i++) {
+                for (let j = i + 1; j < activeThoughts.length; j++) {
+                    const t1 = activeThoughts[i];
+                    const t2 = activeThoughts[j];
+
+                    const dx = t2.x - t1.x;
+                    const dy = t2.y - t1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxDist) {
+                        const age1 = (Date.now() - t1.born) / t1.lifespan;
+                        const age2 = (Date.now() - t2.born) / t2.lifespan;
+                        const fade1 = Math.sin(age1 * Math.PI);
+                        const fade2 = Math.sin(age2 * Math.PI);
+                        const distFade = 1 - (dist / maxDist);
+                        const baseOpacity = fade1 * fade2 * distFade;
+
+                        // Average the phase offsets of connected thoughts
+                        const avgPhase = (t1.phaseOffset + t2.phaseOffset) / 2;
+                        const breathSpeed = 0.7 + state.presence * 0.3;
+                        const breath = 0.7 + Math.sin(stringBreathPhase * breathSpeed + avgPhase) * 0.3;
+
+                        // Apply presence to opacity
+                        const finalOpacity = baseOpacity * presenceGlow;
+
+                        if (finalOpacity > 0.02) {
+                            // Glow layer with breathing
+                            stringCtx.beginPath();
+                            stringCtx.moveTo(t1.x, t1.y);
+                            stringCtx.lineTo(t2.x, t2.y);
+                            stringCtx.strokeStyle = `rgba(255, 252, 248, ${finalOpacity * 0.2 * breath})`;
+                            stringCtx.lineWidth = 2 + breath * 1.5;
+                            stringCtx.stroke();
+
+                            // Bright core with breathing
+                            stringCtx.beginPath();
+                            stringCtx.moveTo(t1.x, t1.y);
+                            stringCtx.lineTo(t2.x, t2.y);
+                            stringCtx.strokeStyle = `rgba(255, 255, 255, ${finalOpacity * 0.35 * breath})`;
+                            stringCtx.lineWidth = 0.8 + breath * 0.6;
+                            stringCtx.stroke();
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawBezierCurves(globalBreath = 1) {
+            bezierCurves.forEach((curve, index) => {
+                curve.progress += curve.speed;
+
+                if (curve.progress >= 1) {
+                    bezierCurves[index] = createBezierCurve();
+                    return;
+                }
+
+                const t = curve.progress;
+                const fadeIn = Math.min(t * 5, 1);
+                const fadeOut = Math.min((1 - t) * 5, 1);
+                const baseOpacity = fadeIn * fadeOut * presenceGlow;
+
+                // Individual breath rhythm, slower when idle
+                const breathSpeed = 0.7 + state.presence * 0.3;
+                const breath = 0.7 + Math.sin(stringBreathPhase * breathSpeed + curve.phaseOffset) * 0.3;
+
+                // Glow layer with breathing
+                stringCtx.beginPath();
+                stringCtx.moveTo(curve.start.x, curve.start.y);
+                stringCtx.bezierCurveTo(
+                    curve.cp1.x, curve.cp1.y,
+                    curve.cp2.x, curve.cp2.y,
+                    curve.end.x, curve.end.y
+                );
+                stringCtx.strokeStyle = `rgba(255, 252, 248, ${baseOpacity * 0.12 * breath})`;
+                stringCtx.lineWidth = curve.width * (3 + breath * 2);
+                stringCtx.stroke();
+
+                // Bright core with breathing
+                stringCtx.beginPath();
+                stringCtx.moveTo(curve.start.x, curve.start.y);
+                stringCtx.bezierCurveTo(
+                    curve.cp1.x, curve.cp1.y,
+                    curve.cp2.x, curve.cp2.y,
+                    curve.end.x, curve.end.y
+                );
+                stringCtx.strokeStyle = `rgba(255, 255, 255, ${baseOpacity * 0.25 * breath})`;
+                stringCtx.lineWidth = curve.width * (1 + breath * 0.8);
+                stringCtx.stroke();
+            });
+
+            // Occasionally add new curves
+            if (Math.random() < 0.005 && bezierCurves.length < 8) {
+                bezierCurves.push(createBezierCurve());
+            }
+        }
+
+        function registerThought(x, y, lifespan) {
+            const thought = {
+                x, y,
+                born: Date.now(),
+                lifespan,
+                active: true,
+                phaseOffset: Math.random() * Math.PI * 2  // Individual breath phase
+            };
+            thoughtPositions.push(thought);
+
+            setTimeout(() => {
+                thought.active = false;
+                thoughtPositions = thoughtPositions.filter(t => t.active);
+            }, lifespan);
+        }
+
+        // Start string art animation
+        drawStringArt();
+
         const notes = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
         const modes = ['ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian', 'locrian'];
-        const qualities = ['', 'm', 'maj7', 'm7', 'sus4', '6', 'add9'];
+        // Extended qualities with Rosenwinkel-inspired jazz voicings
+        const qualities = [
+            '', 'm', 'maj7', 'm7', 'sus4', '6', 'add9',
+            '7♯9', '7♭9', '7alt', 'm(maj7)', '13', 'maj7♯11', 'm11', '7sus4', 'ø7', 'Q'
+        ];
         
         let state = {
             key: 'D',
             mode: 'dorian',
             density: 0.008,
+            baseDensity: 0.008,
             drift: 0.012,
-            lastChange: Date.now()
+            lastChange: Date.now(),
+            homeKey: 'D',
+            homeMode: 'dorian',
+            sessionStart: null,
+            journeyPhase: 0,  // 0 = wandering, increases toward 1 = arriving home
+            lastCenterChord: null,
+            arrived: false,
+            // Presence tracking
+            lastActivity: Date.now(),
+            mouseVelocity: 0,
+            presence: 0.5,  // 0 = idle/settled, 1 = active/engaged
+            lastMouseX: 0,
+            lastMouseY: 0
         };
+
+        // Altered chords that want resolution
+        const alteredChords = ['7♯9', '7♭9', '7alt'];
+
+        function isAlteredChord(chord) {
+            return alteredChords.some(alt => chord.includes(alt));
+        }
+
+        function getResolutionRoot(chord) {
+            // Extract root from chord (e.g., "G7♯9" -> "G")
+            let root = chord[0];
+            if (chord[1] === '♯' || chord[1] === '♭') root += chord[1];
+            // Resolution is down a fifth (or up a fourth)
+            const rootIndex = notes.indexOf(root);
+            const resolutionIndex = (rootIndex + 5) % 12; // down a fifth
+            return notes[resolutionIndex];
+        }
         
         function weightedRandom(items, weights) {
             const total = weights.reduce((a, b) => a + b, 0);
@@ -327,9 +998,15 @@
             return items[items.length - 1];
         }
         
-        function generateChord() {
+        function generateChord(forCenter = false) {
             const keyIndex = notes.indexOf(state.key);
-            
+
+            // If last center chord was altered, bias toward resolution
+            let resolutionBias = null;
+            if (forCenter && state.lastCenterChord && isAlteredChord(state.lastCenterChord)) {
+                resolutionBias = getResolutionRoot(state.lastCenterChord);
+            }
+
             const scaleWeights = {
                 'dorian': [3, 2, 1, 2, 3, 1, 0.5],
                 'ionian': [3, 1, 1, 2, 3, 1, 0.5],
@@ -339,10 +1016,10 @@
                 'phrygian': [3, 2, 1, 2, 2, 2, 1],
                 'locrian': [2, 2, 1, 2, 2, 2, 1]
             };
-            
+
             const weights = scaleWeights[state.mode] || scaleWeights['dorian'];
             const degreeIndex = weightedRandom([0, 1, 2, 3, 4, 5, 6], weights);
-            
+
             const modeIntervals = {
                 'dorian': [0, 2, 3, 5, 7, 9, 10],
                 'ionian': [0, 2, 4, 5, 7, 9, 11],
@@ -352,14 +1029,32 @@
                 'phrygian': [0, 1, 3, 5, 7, 8, 10],
                 'locrian': [0, 1, 3, 5, 6, 8, 10]
             };
-            
+
             const interval = modeIntervals[state.mode][degreeIndex];
             const noteIndex = (keyIndex + interval) % 12;
-            const root = notes[noteIndex];
-            
-            const qualityWeights = [2, 2, 3, 3, 1, 1, 1];
+            let root = notes[noteIndex];
+
+            // Resolution: 70% chance to resolve altered chord
+            if (resolutionBias && Math.random() < 0.7) {
+                root = resolutionBias;
+            }
+
+            // Weighted for ambient jazz feel - favor extended voicings
+            // During arrival, favor warmer chords
+            let qualityWeights;
+            if (state.arrived) {
+                qualityWeights = [
+                    3, 2, 5, 4, 2, 2, 2,  // More maj7, m7 during arrival
+                    0.3, 0.3, 0.1, 1, 0.5, 3, 2, 1, 0.5, 1  // Less tension
+                ];
+            } else {
+                qualityWeights = [
+                    2, 2, 3, 3, 1, 1, 1,  // Basic: '', 'm', 'maj7', 'm7', 'sus4', '6', 'add9'
+                    1, 1, 0.5, 1.5, 0.5, 2, 2, 1.5, 1, 1.5  // Jazz: 7♯9, 7♭9, 7alt, m(maj7), 13, maj7♯11, m11, 7sus4, ø7, Q
+                ];
+            }
             const quality = weightedRandom(qualities, qualityWeights);
-            
+
             return root + quality;
         }
         
@@ -376,17 +1071,21 @@
             const chord = generateChord();
             thought.innerHTML = `<div class="thought-chord">${chord}</div>`;
             
+            // Volume affected by presence - quieter when idle
+            const presenceVolume = 0.010 + state.presence * 0.012;
+
             playChord(chord, {
-                volume: 0.04,
+                volume: presenceVolume,
                 pan: pan * 0.9,
                 octave: 4,
-                attackTime: 5,
-                sustainTime: 14,
-                releaseTime: 8,
+                attackTime: 8,
+                sustainTime: 22,
+                releaseTime: 12,
             });
-            
+
             field.appendChild(thought);
-            setTimeout(() => thought.remove(), 26000);
+            registerThought(x, y, 42000);
+            setTimeout(() => thought.remove(), 42000);
         }
         
         function generateWave() {
@@ -396,40 +1095,121 @@
             setTimeout(() => wave.remove(), 10000);
         }
         
+        function getChordQuality(chord) {
+            // Jazz voicings first (more specific)
+            if (chord.includes('7♯9') || chord.includes('7♭9') || chord.includes('7alt')) return 'alt';
+            if (chord.includes('Q')) return 'quartal';
+            if (chord.includes('ø7')) return 'halfdim';
+            if (chord.includes('m(maj7)')) return 'mmaj7';
+            if (chord.includes('13')) return '13';
+            // Standard voicings
+            if (chord.includes('maj7') || chord.includes('maj9')) return 'maj7';
+            if (chord.includes('m7') || chord.includes('m9') || chord.includes('m11')) return 'm7';
+            if (chord.includes('dim')) return 'dim';
+            if (chord.includes('sus4')) return 'sus4';
+            if (chord.includes('m') && !chord.includes('maj')) return 'm';
+            return '';
+        }
+
         function updateCenter() {
-            const chord = generateChord();
+            const chord = generateChord(true);
+            state.lastCenterChord = chord;
+
             const centerChord = document.getElementById('centerChord');
-            
+            const quality = getChordQuality(chord);
+
+            // Remove all previous chord classes
+            centerChord.classList.remove('swell', 'chord-maj7', 'chord-m7', 'chord-dim', 'chord-sus4', 'chord-m', 'chord-alt', 'chord-quartal', 'chord-halfdim', 'chord-mmaj7', 'chord-13');
             centerChord.style.animation = 'center-fade 3s ease-out forwards';
-            
+
+            // Arrival: longer hold, gentler transition
+            const emergeTime = state.arrived ? 8 : 6;
+            const swellDelay = state.arrived ? 8000 : 6000;
+
             setTimeout(() => {
                 centerChord.textContent = chord;
-                centerChord.style.animation = 'center-emerge 6s ease-out forwards';
+                centerChord.style.animation = `center-emerge ${emergeTime}s ease-out forwards`;
+
+                // Add expressive class based on chord quality
+                if (quality) {
+                    centerChord.classList.add('chord-' + quality);
+                }
+
+                setTimeout(() => {
+                    centerChord.classList.add('swell');
+                }, swellDelay);
             }, 3000);
-            
+
+            // Arrival: softer attack, longer sustain
+            const attackTime = state.arrived ? 7 : 5;
+            const sustainTime = state.arrived ? 18 : 12;
+            const releaseTime = state.arrived ? 14 : 10;
+
             playChord(chord, {
-                volume: 0.14,
+                volume: state.arrived ? 0.28 : 0.32,
                 pan: 0,
                 octave: 3,
-                attackTime: 4,
-                sustainTime: 8,
-                releaseTime: 7
+                attackTime,
+                sustainTime,
+                releaseTime,
+                isCenter: true,
+                swell: true,
             });
-            
+
             generateWave();
         }
         
         function drift() {
+            // Calculate journey phase based on session time (arrive home after ~10 minutes)
+            if (state.sessionStart) {
+                const elapsed = (Date.now() - state.sessionStart) / 1000 / 60; // minutes
+                state.journeyPhase = Math.min(1, elapsed / 10);
+
+                // Check for arrival (journey phase > 0.9 AND we're home)
+                const atHomeKey = state.key === state.homeKey;
+                const atHomeMode = state.mode === state.homeMode;
+                const wasArrived = state.arrived;
+                state.arrived = state.journeyPhase > 0.9 && atHomeKey && atHomeMode;
+
+                // Visual arrival state
+                if (state.arrived && !wasArrived) {
+                    field.classList.add('arrived');
+                    // Slow down density for arrival
+                    state.density = Math.max(0.004, state.density * 0.7);
+                    // Sonic arrival: sustained pedal tone on home root
+                    playPedalTone(state.homeKey);
+                }
+            }
+
+            // As journey progresses, increase pull toward home key
+            const homeIndex = notes.indexOf(state.homeKey);
+            const currentIndex = notes.indexOf(state.key);
+            const homePull = state.journeyPhase * 0.6;
+
             if (Math.random() < state.drift) {
-                const currentIndex = notes.indexOf(state.key);
-                const movement = weightedRandom([-7, -5, -2, 0, 2, 5, 7], [1, 2, 2, 4, 2, 2, 1]);
+                let movement;
+                if (Math.random() < homePull && currentIndex !== homeIndex) {
+                    // Move toward home key
+                    const diff = homeIndex - currentIndex;
+                    movement = diff > 0 ? (diff > 6 ? -5 : 5) : (diff < -6 ? 5 : -5);
+                } else {
+                    movement = weightedRandom([-7, -5, -2, 0, 2, 5, 7], [1, 2, 2, 4, 2, 2, 1]);
+                }
                 const newIndex = (currentIndex + movement + 12) % 12;
                 state.key = notes[newIndex];
             }
-            
+
+            // Mode drift with home pull
             if (Math.random() < state.drift * 0.4) {
+                const homeModeIndex = modes.indexOf(state.homeMode);
                 const currentModeIndex = modes.indexOf(state.mode);
-                const movement = weightedRandom([-1, 0, 1], [1, 3, 1]);
+
+                let movement;
+                if (Math.random() < homePull && currentModeIndex !== homeModeIndex) {
+                    movement = homeModeIndex > currentModeIndex ? 1 : -1;
+                } else {
+                    movement = weightedRandom([-1, 0, 1], [1, 3, 1]);
+                }
                 const newModeIndex = (currentModeIndex + movement + 7) % 7;
                 state.mode = modes[newModeIndex];
             }
@@ -444,6 +1224,129 @@
                 particle.style.animationDuration = (25 + Math.random() * 15) + 's';
                 field.appendChild(particle);
             }
+        }
+
+        // Presence system - the piece responds to user activity
+        let presenceGlow = 0.5;
+
+        function updatePresence() {
+            const now = Date.now();
+            const idleTime = (now - state.lastActivity) / 1000; // seconds
+
+            // Presence decays toward 0.2 when idle, rises with activity
+            const targetPresence = idleTime > 30 ? 0.15 :
+                                   idleTime > 10 ? 0.3 :
+                                   idleTime > 3 ? 0.5 :
+                                   Math.min(1, 0.5 + state.mouseVelocity * 0.005);
+
+            // Smooth interpolation
+            state.presence += (targetPresence - state.presence) * 0.02;
+
+            // Presence affects density
+            state.density = state.baseDensity * (0.4 + state.presence * 0.8);
+
+            // Presence affects string brightness (via CSS variable)
+            presenceGlow = 0.5 + state.presence * 0.5;
+
+            // Presence affects breath element
+            const breathEl = document.querySelector('.breath');
+            if (breathEl) {
+                const breathOpacity = 0.2 + state.presence * 0.3;
+                breathEl.style.opacity = breathOpacity;
+            }
+
+            // Presence affects center chord
+            const centerChord = document.getElementById('centerChord');
+            if (centerChord) {
+                centerChord.style.filter = `brightness(${0.7 + state.presence * 0.3})`;
+            }
+
+            // Presence affects peripheral thought chords
+            const thoughtChords = document.querySelectorAll('.thought-chord');
+            thoughtChords.forEach(chord => {
+                chord.style.filter = `brightness(${0.6 + state.presence * 0.4})`;
+            });
+
+            // Velocity decays
+            state.mouseVelocity *= 0.95;
+
+            requestAnimationFrame(updatePresence);
+        }
+
+        // Track mouse movement
+        document.addEventListener('mousemove', (e) => {
+            if (!started) return;
+
+            const dx = e.clientX - state.lastMouseX;
+            const dy = e.clientY - state.lastMouseY;
+            const velocity = Math.sqrt(dx * dx + dy * dy);
+
+            state.mouseVelocity = Math.min(100, state.mouseVelocity + velocity * 0.3);
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+            state.lastActivity = Date.now();
+        });
+
+        // Track click/touch interaction for presence
+        document.addEventListener('click', () => {
+            state.lastActivity = Date.now();
+            state.mouseVelocity = Math.min(100, state.mouseVelocity + 30);
+        });
+
+        document.addEventListener('touchstart', () => {
+            state.lastActivity = Date.now();
+            state.mouseVelocity = Math.min(100, state.mouseVelocity + 25);
+        });
+
+        // Christmas easter egg - minimal light dots
+        let snowEnabled = new Date().getMonth() === 11; // December
+
+        function createSnowflake() {
+            if (!snowEnabled) return;
+
+            const flake = document.createElement('div');
+            flake.className = 'snowflake';
+            flake.style.left = Math.random() * 100 + 'vw';
+
+            // Vary size subtly
+            const size = 1 + Math.random() * 2;
+            flake.style.width = size + 'px';
+            flake.style.height = size + 'px';
+
+            // Randomized opacity with gentle pulse
+            const baseOpacity = 0.15 + Math.random() * 0.35;
+            flake.style.opacity = baseOpacity;
+
+            const duration = 15 + Math.random() * 25;
+            flake.style.animationDuration = duration + 's';
+
+            // Organic horizontal drift - asymmetric, varying speeds
+            const swayAmount = 20 + Math.random() * 50;
+            const swayOffset = (Math.random() - 0.5) * swayAmount * 0.5;
+            const swayDuration = 5000 + Math.random() * 7000;
+
+            // Asymmetric keyframes for more natural drift
+            flake.animate([
+                { marginLeft: swayOffset + 'px', opacity: baseOpacity },
+                { marginLeft: (swayAmount * 0.7) + 'px', opacity: baseOpacity * 1.2 },
+                { marginLeft: (-swayAmount * 0.4) + 'px', opacity: baseOpacity * 0.8 },
+                { marginLeft: (swayAmount * 0.3) + 'px', opacity: baseOpacity },
+                { marginLeft: swayOffset + 'px', opacity: baseOpacity }
+            ], {
+                duration: swayDuration,
+                iterations: Infinity,
+                easing: 'ease-in-out'
+            });
+
+            document.body.appendChild(flake);
+            setTimeout(() => flake.remove(), duration * 1000);
+        }
+
+        function snowLoop() {
+            if (snowEnabled && Math.random() < 0.15) {
+                createSnowflake();
+            }
+            requestAnimationFrame(snowLoop);
         }
         
         function generativeLoop() {
@@ -464,16 +1367,43 @@
         }
         
         let started = false;
-        
-        field.addEventListener('click', (e) => {
+        let controlsVisible = false;
+        const introOverlay = document.getElementById('introOverlay');
+
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            const controls = document.getElementById('controls');
+            const controlsHint = document.getElementById('controlsHint');
+            controls.classList.toggle('visible', controlsVisible);
+            controls.classList.toggle('hidden', !controlsVisible);
+            controlsHint.style.opacity = controlsVisible ? '0' : '1';
+        }
+
+        function startExperience() {
+            if (started) return;
+            started = true;
+            state.sessionStart = Date.now();
+            state.lastActivity = Date.now();
+
             initAudio();
-            
+            introOverlay.classList.add('hidden');
+            updateCenter();
+            state.lastChange = Date.now();
+
+            // Start presence tracking
+            updatePresence();
+        }
+
+        // Intro overlay click
+        introOverlay.addEventListener('click', startExperience);
+
+        field.addEventListener('click', (e) => {
             if (!started) {
-                started = true;
-                updateCenter();
-                state.lastChange = Date.now();
+                startExperience();
                 return;
             }
+
+            initAudio();
             
             const x = e.clientX + (Math.random() - 0.5) * 80;
             const y = e.clientY + (Math.random() - 0.5) * 80;
@@ -488,48 +1418,200 @@
             thought.innerHTML = `<div class="thought-chord">${chord}</div>`;
             
             playChord(chord, {
-                volume: 0.055,
+                volume: 0.025,
                 pan: pan * 0.8,
                 octave: 4,
-                attackTime: 3,
-                sustainTime: 12,
-                releaseTime: 7
+                attackTime: 6,
+                sustainTime: 18,
+                releaseTime: 10
             });
-            
+
             field.appendChild(thought);
-            setTimeout(() => thought.remove(), 26000);
-            
+            registerThought(x, y, 38000);
+            setTimeout(() => thought.remove(), 38000);
+
             updateCenter();
             state.lastChange = Date.now();
         });
         
         document.addEventListener('keydown', (e) => {
-            if (!started) {
-                initAudio();
-                started = true;
-                updateCenter();
-                state.lastChange = Date.now();
+            // Track activity for presence system
+            state.lastActivity = Date.now();
+            state.mouseVelocity = Math.min(100, state.mouseVelocity + 20);
+
+            if (e.key === 'Escape') {
+                toggleControls();
+                return;
             }
-            
+
+            if (!started) {
+                startExperience();
+            }
+
             if (e.key === ' ') {
                 e.preventDefault();
                 updateCenter();
                 state.lastChange = Date.now();
             }
-            
+
             const modeKeys = {'d': 'dorian', 'i': 'ionian', 'l': 'lydian', 'm': 'mixolydian', 'a': 'aeolian', 'p': 'phrygian'};
             if (modeKeys[e.key.toLowerCase()]) {
                 state.mode = modeKeys[e.key.toLowerCase()];
             }
-            
+
             const noteKey = e.key.toUpperCase();
             if (['C', 'D', 'E', 'F', 'G', 'A', 'B'].includes(noteKey)) {
                 state.key = noteKey;
+            }
+
+            // Christmas easter egg toggle
+            if (e.key.toLowerCase() === 'x') {
+                snowEnabled = !snowEnabled;
             }
         });
         
         generateParticles(8);
         generativeLoop();
+        snowLoop(); // Christmas easter egg
+
+        // GUI Controls
+        const controls = document.getElementById('controls');
+        const controlsHint = document.getElementById('controlsHint');
+        const soundToggle = document.getElementById('soundToggle');
+        const volumeControl = document.getElementById('volumeControl');
+        const densityControl = document.getElementById('densityControl');
+        const reverbControl = document.getElementById('reverbControl');
+
+        let controlValues = {
+            volume: 60,
+            density: 40,
+            reverb: 65
+        };
+
+        // Sound toggle
+        soundToggle.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggle.classList.toggle('active', soundEnabled);
+            soundToggle.classList.toggle('inactive', !soundEnabled);
+            if (masterGain) {
+                const vol = controlValues.volume / 100;
+                masterGain.gain.value = soundEnabled ? 0.22 * vol : 0;
+                centerGain.gain.value = soundEnabled ? 0.22 * vol : 0;
+            }
+        });
+
+        // Drag-based controls for text controls
+        function setupDragControl(element, onChange) {
+            let isDragging = false;
+            let startY, startValue;
+
+            const getValue = () => parseInt(element.dataset.value) || 50;
+            const setValue = (val) => {
+                val = Math.max(0, Math.min(100, val));
+                element.dataset.value = val;
+
+                // Update glow based on value
+                const glow = element.querySelector('.control-glow');
+                if (glow) {
+                    const intensity = val / 100;
+                    glow.classList.toggle('bright', val > 40);
+                    // Scale glow size and intensity with value
+                    const size = 4 + intensity * 4;
+                    const blur = intensity * 16;
+                    const opacity = 0.1 + intensity * 0.4;
+                    glow.style.width = size + 'px';
+                    glow.style.height = size + 'px';
+                    glow.style.boxShadow = `0 0 ${blur}px rgba(250, 248, 244, ${opacity})`;
+                }
+                onChange(val);
+            };
+
+            element.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startY = e.clientY;
+                startValue = getValue();
+                e.preventDefault();
+            });
+
+            element.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -5 : 5;
+                setValue(getValue() + delta);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaY = startY - e.clientY;
+                const newValue = startValue + deltaY * 0.5;
+                setValue(newValue);
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Touch support
+            element.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                startY = e.touches[0].clientY;
+                startValue = getValue();
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault(); // Prevent page scroll while adjusting
+                const deltaY = startY - e.touches[0].clientY;
+                const newValue = startValue + deltaY * 0.5;
+                setValue(newValue);
+            }, { passive: false });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+        }
+
+        // Initialize glow state for a control
+        function initControlGlow(element) {
+            const val = parseInt(element.dataset.value) || 50;
+            const glow = element.querySelector('.control-glow');
+            if (glow) {
+                const intensity = val / 100;
+                glow.classList.toggle('bright', val > 40);
+                const size = 4 + intensity * 4;
+                const blur = intensity * 16;
+                const opacity = 0.1 + intensity * 0.4;
+                glow.style.width = size + 'px';
+                glow.style.height = size + 'px';
+                glow.style.boxShadow = `0 0 ${blur}px rgba(250, 248, 244, ${opacity})`;
+            }
+        }
+
+        // Volume
+        setupDragControl(volumeControl, (val) => {
+            controlValues.volume = val;
+            if (masterGain && soundEnabled) {
+                masterGain.gain.value = 0.22 * (val / 100);
+                centerGain.gain.value = 0.22 * (val / 100);
+            }
+        });
+        initControlGlow(volumeControl);
+
+        // Density (sets baseDensity, presence modulates actual density)
+        setupDragControl(densityControl, (val) => {
+            controlValues.density = val;
+            state.baseDensity = 0.002 + (val / 100) * 0.016;
+        });
+        initControlGlow(densityControl);
+
+        // Reverb
+        setupDragControl(reverbControl, (val) => {
+            controlValues.reverb = val;
+            if (wetGain && dryGain) {
+                wetGain.gain.value = val / 100;
+                dryGain.gain.value = 1 - (val / 100) * 0.5;
+            }
+        });
+        initControlGlow(reverbControl);
     </script>
 </body>
 </html>
