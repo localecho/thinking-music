@@ -528,6 +528,20 @@
             <span class="control-name">theme</span>
             <span class="control-value" id="themeValue">fog</span>
         </div>
+
+        <div class="control-divider"></div>
+
+        <div class="text-control" id="binauralToggle">
+            <span class="control-name">binaural</span>
+            <span class="control-value" id="binauralValue">off</span>
+        </div>
+
+        <div class="control-divider"></div>
+
+        <div class="text-control active" id="shareButton">
+            <span class="control-name">share</span>
+            <span class="control-value" id="shareValue">copy link</span>
+        </div>
     </div>
     
     <script>
@@ -538,6 +552,15 @@
         let wetGain = null;
         let audioInitialized = false;
         let soundEnabled = true;
+
+        // Binaural beat system
+        let binauralEnabled = false;
+        let binauralOscL = null;
+        let binauralOscR = null;
+        let binauralGainL = null;
+        let binauralGainR = null;
+        const binauralBaseFreq = 110; // A2 - low, unobtrusive
+        const binauralBeatFreq = 10;  // 10Hz = Alpha waves (relaxed focus)
 
         // Theme system
         const themes = ['fog', 'amber', 'blue', 'oled'];
@@ -618,6 +641,80 @@
             'Q7': [0, 5, 10, 15],           // Extended quartal
         };
         
+        function startBinaural() {
+            if (!audioInitialized || binauralOscL) return;
+
+            // Left ear: base frequency
+            binauralOscL = audioCtx.createOscillator();
+            binauralOscL.type = 'sine';
+            binauralOscL.frequency.value = binauralBaseFreq;
+
+            binauralGainL = audioCtx.createGain();
+            binauralGainL.gain.value = 0;
+
+            const panL = audioCtx.createStereoPanner();
+            panL.pan.value = -1;
+
+            binauralOscL.connect(binauralGainL);
+            binauralGainL.connect(panL);
+            panL.connect(audioCtx.destination);
+
+            // Right ear: base + beat frequency
+            binauralOscR = audioCtx.createOscillator();
+            binauralOscR.type = 'sine';
+            binauralOscR.frequency.value = binauralBaseFreq + binauralBeatFreq;
+
+            binauralGainR = audioCtx.createGain();
+            binauralGainR.gain.value = 0;
+
+            const panR = audioCtx.createStereoPanner();
+            panR.pan.value = 1;
+
+            binauralOscR.connect(binauralGainR);
+            binauralGainR.connect(panR);
+            panR.connect(audioCtx.destination);
+
+            binauralOscL.start();
+            binauralOscR.start();
+
+            // Fade in
+            const now = audioCtx.currentTime;
+            binauralGainL.gain.setValueAtTime(0, now);
+            binauralGainL.gain.linearRampToValueAtTime(0.03, now + 3);
+            binauralGainR.gain.setValueAtTime(0, now);
+            binauralGainR.gain.linearRampToValueAtTime(0.03, now + 3);
+        }
+
+        function stopBinaural() {
+            if (!binauralOscL) return;
+
+            const now = audioCtx.currentTime;
+            binauralGainL.gain.linearRampToValueAtTime(0, now + 2);
+            binauralGainR.gain.linearRampToValueAtTime(0, now + 2);
+
+            setTimeout(() => {
+                binauralOscL.stop();
+                binauralOscR.stop();
+                binauralOscL = null;
+                binauralOscR = null;
+            }, 2500);
+        }
+
+        function toggleBinaural() {
+            binauralEnabled = !binauralEnabled;
+            const toggle = document.getElementById('binauralToggle');
+            const value = document.getElementById('binauralValue');
+
+            toggle.classList.toggle('active', binauralEnabled);
+            value.textContent = binauralEnabled ? '10hz α' : 'off';
+
+            if (binauralEnabled && audioInitialized) {
+                startBinaural();
+            } else {
+                stopBinaural();
+            }
+        }
+
         function initAudio() {
             if (audioInitialized) return;
 
@@ -1559,7 +1656,25 @@
             if (e.key.toLowerCase() === 't') {
                 cycleTheme();
             }
+
+            // Fullscreen toggle
+            if (e.key.toLowerCase() === 'f') {
+                toggleFullscreen();
+            }
+
+            // Binaural toggle
+            if (e.key.toLowerCase() === 'b') {
+                toggleBinaural();
+            }
         });
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
         
         generateParticles(8);
         generativeLoop();
@@ -1573,11 +1688,23 @@
         const densityControl = document.getElementById('densityControl');
         const reverbControl = document.getElementById('reverbControl');
 
+        // Load saved control values or use defaults
+        const savedControls = JSON.parse(localStorage.getItem('thinking-music-controls') || '{}');
         let controlValues = {
-            volume: 60,
-            density: 40,
-            reverb: 65
+            volume: savedControls.volume ?? 60,
+            density: savedControls.density ?? 40,
+            reverb: savedControls.reverb ?? 65
         };
+
+        function saveControlValues() {
+            localStorage.setItem('thinking-music-controls', JSON.stringify(controlValues));
+        }
+
+        // Apply saved values to UI
+        volumeControl.dataset.value = controlValues.volume;
+        densityControl.dataset.value = controlValues.density;
+        reverbControl.dataset.value = controlValues.reverb;
+        state.baseDensity = 0.002 + (controlValues.density / 100) * 0.016;
 
         // Sound toggle
         soundToggle.addEventListener('click', () => {
@@ -1686,6 +1813,7 @@
                 masterGain.gain.value = 0.22 * (val / 100);
                 centerGain.gain.value = 0.22 * (val / 100);
             }
+            saveControlValues();
         });
         initControlGlow(volumeControl);
 
@@ -1693,6 +1821,7 @@
         setupDragControl(densityControl, (val) => {
             controlValues.density = val;
             state.baseDensity = 0.002 + (val / 100) * 0.016;
+            saveControlValues();
         });
         initControlGlow(densityControl);
 
@@ -1703,12 +1832,35 @@
                 wetGain.gain.value = val / 100;
                 dryGain.gain.value = 1 - (val / 100) * 0.5;
             }
+            saveControlValues();
         });
         initControlGlow(reverbControl);
 
         // Theme control
         const themeControl = document.getElementById('themeControl');
         themeControl.addEventListener('click', cycleTheme);
+
+        // Binaural control
+        const binauralToggle = document.getElementById('binauralToggle');
+        binauralToggle.addEventListener('click', toggleBinaural);
+
+        // Share button
+        const shareButton = document.getElementById('shareButton');
+        const shareValue = document.getElementById('shareValue');
+        shareButton.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                shareValue.textContent = 'copied!';
+                setTimeout(() => {
+                    shareValue.textContent = 'copy link';
+                }, 2000);
+            } catch (e) {
+                shareValue.textContent = 'failed';
+                setTimeout(() => {
+                    shareValue.textContent = 'copy link';
+                }, 2000);
+            }
+        });
     </script>
 </body>
 </html>
