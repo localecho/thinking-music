@@ -26,6 +26,40 @@
             --murmur: rgba(250, 248, 244, 0.10);
             --voice: rgba(250, 248, 244, 0.30);
             --speak: rgba(250, 248, 244, 0.55);
+            --accent: 250, 248, 244;
+        }
+
+        /* Warm Amber theme */
+        [data-theme="amber"] {
+            --void: #0a0806;
+            --fog: rgba(255, 191, 128, 0.015);
+            --whisper: rgba(255, 191, 128, 0.04);
+            --murmur: rgba(255, 191, 128, 0.12);
+            --voice: rgba(255, 191, 128, 0.32);
+            --speak: rgba(255, 200, 140, 0.6);
+            --accent: 255, 191, 128;
+        }
+
+        /* Cool Blue theme */
+        [data-theme="blue"] {
+            --void: #050810;
+            --fog: rgba(140, 180, 255, 0.015);
+            --whisper: rgba(140, 180, 255, 0.04);
+            --murmur: rgba(140, 180, 255, 0.10);
+            --voice: rgba(140, 180, 255, 0.30);
+            --speak: rgba(160, 195, 255, 0.55);
+            --accent: 140, 180, 255;
+        }
+
+        /* True Black OLED theme */
+        [data-theme="oled"] {
+            --void: #000000;
+            --fog: rgba(255, 255, 255, 0.01);
+            --whisper: rgba(255, 255, 255, 0.025);
+            --murmur: rgba(255, 255, 255, 0.07);
+            --voice: rgba(255, 255, 255, 0.22);
+            --speak: rgba(255, 255, 255, 0.45);
+            --accent: 255, 255, 255;
         }
         
         html, body {
@@ -322,11 +356,11 @@
             position: fixed;
             width: 2px;
             height: 2px;
-            background: rgba(250, 248, 244, 0.5);
+            background: rgba(var(--accent), 0.5);
             border-radius: 50%;
             pointer-events: none;
             z-index: 50;
-            box-shadow: 0 0 3px rgba(250, 248, 244, 0.3);
+            box-shadow: 0 0 3px rgba(var(--accent), 0.3);
             animation: snowfall linear forwards;
         }
 
@@ -419,12 +453,12 @@
             background: var(--murmur);
             margin-top: 6px;
             transition: all 0.3s ease;
-            box-shadow: 0 0 0 rgba(250, 248, 244, 0);
+            box-shadow: 0 0 0 rgba(var(--accent), 0);
         }
 
         .text-control .control-glow.bright {
             background: var(--voice);
-            box-shadow: 0 0 12px rgba(250, 248, 244, 0.3);
+            box-shadow: 0 0 12px rgba(var(--accent), 0.3);
         }
 
         .control-divider {
@@ -487,6 +521,13 @@
             <span class="control-name">reverb</span>
             <div class="control-glow bright"></div>
         </div>
+
+        <div class="control-divider"></div>
+
+        <div class="text-control active" id="themeControl">
+            <span class="control-name">theme</span>
+            <span class="control-value" id="themeValue">fog</span>
+        </div>
     </div>
     
     <script>
@@ -497,6 +538,45 @@
         let wetGain = null;
         let audioInitialized = false;
         let soundEnabled = true;
+
+        // Theme system
+        const themes = ['fog', 'amber', 'blue', 'oled'];
+        let currentThemeIndex = 0;
+
+        // String colors per theme
+        const themeStringColors = {
+            'fog': { r: 250, g: 248, b: 244 },
+            'amber': { r: 255, g: 191, b: 128 },
+            'blue': { r: 140, g: 180, b: 255 },
+            'oled': { r: 255, g: 255, b: 255 }
+        };
+
+        function setTheme(themeName) {
+            const html = document.documentElement;
+            if (themeName === 'fog') {
+                html.removeAttribute('data-theme');
+            } else {
+                html.setAttribute('data-theme', themeName);
+            }
+            document.getElementById('themeValue').textContent = themeName;
+            localStorage.setItem('thinking-music-theme', themeName);
+        }
+
+        function cycleTheme() {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            setTheme(themes[currentThemeIndex]);
+        }
+
+        function getStringColor() {
+            return themeStringColors[themes[currentThemeIndex]];
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('thinking-music-theme');
+        if (savedTheme && themes.includes(savedTheme)) {
+            currentThemeIndex = themes.indexOf(savedTheme);
+            setTheme(savedTheme);
+        }
         
         const noteFrequencies = {
             'C': 261.63, 'C♯': 277.18, 'D♭': 277.18,
@@ -795,11 +875,14 @@
                 const midX = (center.x + thought.x) / 2;
                 const midY = (center.y + thought.y) / 2;
 
+                // Get theme color
+                const c = getStringColor();
+
                 // Outer glow with breathing
                 const glowGradient = stringCtx.createLinearGradient(center.x, center.y, thought.x, thought.y);
-                glowGradient.addColorStop(0, `rgba(255, 255, 255, ${baseOpacity * 0.2 * breath})`);
-                glowGradient.addColorStop(0.5, `rgba(255, 252, 248, ${baseOpacity * 0.1 * breath})`);
-                glowGradient.addColorStop(1, `rgba(255, 252, 248, ${baseOpacity * 0.05})`);
+                glowGradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.2 * breath})`);
+                glowGradient.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.1 * breath})`);
+                glowGradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.05})`);
 
                 stringCtx.beginPath();
                 stringCtx.moveTo(center.x, center.y);
@@ -810,9 +893,9 @@
 
                 // Bright core with breathing thickness
                 const coreGradient = stringCtx.createLinearGradient(center.x, center.y, thought.x, thought.y);
-                coreGradient.addColorStop(0, `rgba(255, 255, 255, ${baseOpacity * 0.4 * breath})`);
-                coreGradient.addColorStop(0.5, `rgba(255, 252, 248, ${baseOpacity * 0.25 * breath})`);
-                coreGradient.addColorStop(1, `rgba(255, 252, 248, ${baseOpacity * 0.1})`);
+                coreGradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.4 * breath})`);
+                coreGradient.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.25 * breath})`);
+                coreGradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.1})`);
 
                 stringCtx.beginPath();
                 stringCtx.moveTo(center.x, center.y);
@@ -853,11 +936,13 @@
                         const finalOpacity = baseOpacity * presenceGlow;
 
                         if (finalOpacity > 0.02) {
+                            const c = getStringColor();
+
                             // Glow layer with breathing
                             stringCtx.beginPath();
                             stringCtx.moveTo(t1.x, t1.y);
                             stringCtx.lineTo(t2.x, t2.y);
-                            stringCtx.strokeStyle = `rgba(255, 252, 248, ${finalOpacity * 0.2 * breath})`;
+                            stringCtx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${finalOpacity * 0.2 * breath})`;
                             stringCtx.lineWidth = 2 + breath * 1.5;
                             stringCtx.stroke();
 
@@ -865,7 +950,7 @@
                             stringCtx.beginPath();
                             stringCtx.moveTo(t1.x, t1.y);
                             stringCtx.lineTo(t2.x, t2.y);
-                            stringCtx.strokeStyle = `rgba(255, 255, 255, ${finalOpacity * 0.35 * breath})`;
+                            stringCtx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${finalOpacity * 0.35 * breath})`;
                             stringCtx.lineWidth = 0.8 + breath * 0.6;
                             stringCtx.stroke();
                         }
@@ -891,6 +976,7 @@
                 // Individual breath rhythm, slower when idle
                 const breathSpeed = 0.7 + state.presence * 0.3;
                 const breath = 0.7 + Math.sin(stringBreathPhase * breathSpeed + curve.phaseOffset) * 0.3;
+                const c = getStringColor();
 
                 // Glow layer with breathing
                 stringCtx.beginPath();
@@ -900,7 +986,7 @@
                     curve.cp2.x, curve.cp2.y,
                     curve.end.x, curve.end.y
                 );
-                stringCtx.strokeStyle = `rgba(255, 252, 248, ${baseOpacity * 0.12 * breath})`;
+                stringCtx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.12 * breath})`;
                 stringCtx.lineWidth = curve.width * (3 + breath * 2);
                 stringCtx.stroke();
 
@@ -912,7 +998,7 @@
                     curve.cp2.x, curve.cp2.y,
                     curve.end.x, curve.end.y
                 );
-                stringCtx.strokeStyle = `rgba(255, 255, 255, ${baseOpacity * 0.25 * breath})`;
+                stringCtx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${baseOpacity * 0.25 * breath})`;
                 stringCtx.lineWidth = curve.width * (1 + breath * 0.8);
                 stringCtx.stroke();
             });
@@ -1468,6 +1554,11 @@
             if (e.key.toLowerCase() === 'x') {
                 snowEnabled = !snowEnabled;
             }
+
+            // Theme toggle
+            if (e.key.toLowerCase() === 't') {
+                cycleTheme();
+            }
         });
         
         generateParticles(8);
@@ -1519,9 +1610,10 @@
                     const size = 4 + intensity * 4;
                     const blur = intensity * 16;
                     const opacity = 0.1 + intensity * 0.4;
+                    const c = getStringColor();
                     glow.style.width = size + 'px';
                     glow.style.height = size + 'px';
-                    glow.style.boxShadow = `0 0 ${blur}px rgba(250, 248, 244, ${opacity})`;
+                    glow.style.boxShadow = `0 0 ${blur}px rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`;
                 }
                 onChange(val);
             };
@@ -1580,9 +1672,10 @@
                 const size = 4 + intensity * 4;
                 const blur = intensity * 16;
                 const opacity = 0.1 + intensity * 0.4;
+                const c = getStringColor();
                 glow.style.width = size + 'px';
                 glow.style.height = size + 'px';
-                glow.style.boxShadow = `0 0 ${blur}px rgba(250, 248, 244, ${opacity})`;
+                glow.style.boxShadow = `0 0 ${blur}px rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`;
             }
         }
 
@@ -1612,6 +1705,10 @@
             }
         });
         initControlGlow(reverbControl);
+
+        // Theme control
+        const themeControl = document.getElementById('themeControl');
+        themeControl.addEventListener('click', cycleTheme);
     </script>
 </body>
 </html>
