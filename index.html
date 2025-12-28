@@ -480,6 +480,87 @@
             z-index: 99;
             transition: opacity 0.6s ease;
         }
+
+        .session-timer {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            font-size: 0.8rem;
+            font-style: italic;
+            color: var(--whisper);
+            letter-spacing: 0.1em;
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .session-timer.visible {
+            opacity: 1;
+        }
+
+        /* Help overlay */
+        .help-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .help-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .help-content {
+            text-align: center;
+            max-width: 320px;
+        }
+
+        .help-title {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: var(--voice);
+            letter-spacing: 0.2em;
+            margin-bottom: 32px;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 12px 24px;
+            text-align: left;
+        }
+
+        .help-key {
+            font-size: 0.85rem;
+            color: var(--speak);
+            letter-spacing: 0.05em;
+            text-align: right;
+        }
+
+        .help-desc {
+            font-size: 0.85rem;
+            font-style: italic;
+            color: var(--murmur);
+            letter-spacing: 0.05em;
+        }
+
+        .help-dismiss {
+            margin-top: 32px;
+            font-size: 0.75rem;
+            font-style: italic;
+            color: var(--whisper);
+            letter-spacing: 0.15em;
+        }
     </style>
 </head>
 <body>
@@ -499,7 +580,27 @@
         </div>
     </div>
 
+    <div class="session-timer" id="sessionTimer"></div>
     <div class="controls-hint" id="controlsHint">esc for controls</div>
+
+    <!-- Help overlay -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-content">
+            <div class="help-title">keyboard</div>
+            <div class="help-grid">
+                <span class="help-key">space</span><span class="help-desc">new chord</span>
+                <span class="help-key">t</span><span class="help-desc">theme</span>
+                <span class="help-key">f</span><span class="help-desc">fullscreen</span>
+                <span class="help-key">b</span><span class="help-desc">binaural</span>
+                <span class="help-key">x</span><span class="help-desc">snow</span>
+                <span class="help-key">esc</span><span class="help-desc">controls</span>
+                <span class="help-key">?</span><span class="help-desc">this help</span>
+                <span class="help-key">c-b</span><span class="help-desc">root note</span>
+                <span class="help-key">d i l m a p</span><span class="help-desc">modes</span>
+            </div>
+            <div class="help-dismiss">press any key</div>
+        </div>
+    </div>
     <div class="controls" id="controls">
         <div class="text-control active" id="soundToggle">
             <span class="control-name">sound</span>
@@ -755,7 +856,19 @@
             wetGain.connect(audioCtx.destination);
 
             audioInitialized = true;
+
+            // iOS audio fix - resume on user gesture
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
+
+        // iOS: resume audio context on any touch
+        document.addEventListener('touchstart', () => {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }, { once: false });
         
         function getFrequency(note, octave = 4) {
             const baseFreq = noteFrequencies[note];
@@ -1575,7 +1688,45 @@
 
             // Start presence tracking
             updatePresence();
+
+            // Start session timer
+            updateSessionTimer();
         }
+
+        // Session timer
+        const sessionTimer = document.getElementById('sessionTimer');
+        function updateSessionTimer() {
+            if (!state.sessionStart) return;
+
+            const elapsed = Math.floor((Date.now() - state.sessionStart) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+
+            if (mins > 0) {
+                sessionTimer.textContent = `${mins}m ${secs.toString().padStart(2, '0')}s`;
+                sessionTimer.classList.add('visible');
+            }
+
+            setTimeout(updateSessionTimer, 1000);
+        }
+
+        // Help overlay
+        const helpOverlay = document.getElementById('helpOverlay');
+        let helpVisible = false;
+
+        function toggleHelp() {
+            helpVisible = !helpVisible;
+            helpOverlay.classList.toggle('visible', helpVisible);
+        }
+
+        function hideHelp() {
+            if (helpVisible) {
+                helpVisible = false;
+                helpOverlay.classList.remove('visible');
+            }
+        }
+
+        helpOverlay.addEventListener('click', hideHelp);
 
         // Intro overlay click
         introOverlay.addEventListener('click', startExperience);
@@ -1621,6 +1772,17 @@
             // Track activity for presence system
             state.lastActivity = Date.now();
             state.mouseVelocity = Math.min(100, state.mouseVelocity + 20);
+
+            // Help overlay - ? to show, any key to dismiss
+            if (helpVisible) {
+                hideHelp();
+                return;
+            }
+
+            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                toggleHelp();
+                return;
+            }
 
             if (e.key === 'Escape') {
                 toggleControls();
