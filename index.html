@@ -592,7 +592,7 @@
                 <span class="help-key">t</span><span class="help-desc">theme</span>
                 <span class="help-key">f</span><span class="help-desc">fullscreen</span>
                 <span class="help-key">b</span><span class="help-desc">binaural α/θ/β</span>
-                <span class="help-key">p</span><span class="help-desc">25min focus</span>
+                <span class="help-key">r</span><span class="help-desc">rain</span>
                 <span class="help-key">x</span><span class="help-desc">snow</span>
                 <span class="help-key">esc</span><span class="help-desc">controls</span>
                 <span class="help-key">?</span><span class="help-desc">this help</span>
@@ -647,6 +647,13 @@
 
         <div class="control-divider"></div>
 
+        <div class="text-control" id="rainToggle">
+            <span class="control-name">rain</span>
+            <span class="control-value" id="rainValue">off</span>
+        </div>
+
+        <div class="control-divider"></div>
+
         <div class="text-control active" id="shareButton">
             <span class="control-name">share</span>
             <span class="control-value" id="shareValue">copy link</span>
@@ -683,6 +690,12 @@
         let pomodoroStart = null;
         let pomodoroInterval = null;
         const POMODORO_DURATION = 25 * 60 * 1000; // 25 minutes
+
+        // Rain/ambient noise system
+        let rainEnabled = false;
+        let rainNode = null;
+        let rainGain = null;
+        let rainFilter = null;
 
         // Theme system
         const themes = ['fog', 'amber', 'blue', 'oled'];
@@ -854,6 +867,11 @@
             state.arrived = false;
             field.classList.remove('arrived');
 
+            // Request notification permission for completion alert
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
             // Update timer display
             updatePomodoroTimer();
         }
@@ -907,10 +925,101 @@
                     field.classList.add('arrived');
                     playPedalTone(state.homeKey);
                 }
+
+                // Browser notification
+                if (Notification.permission === 'granted') {
+                    new Notification('Focus Complete', {
+                        body: '25 minutes of deep work. Take a break.',
+                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="%23faf8f4" stroke-width="2"/></svg>'
+                    });
+                }
                 return;
             }
 
             pomodoroInterval = setTimeout(updatePomodoroTimer, 1000);
+        }
+
+        // Rain ambient sound (brown noise filtered)
+        function startRain() {
+            if (!audioInitialized || rainNode) return;
+
+            // Create brown noise using AudioWorklet-style approach
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
+
+            for (let channel = 0; channel < 2; channel++) {
+                const output = noiseBuffer.getChannelData(channel);
+                let lastOut = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    // Brown noise formula
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5; // Gain compensation
+                }
+            }
+
+            rainNode = audioCtx.createBufferSource();
+            rainNode.buffer = noiseBuffer;
+            rainNode.loop = true;
+
+            // Low-pass filter for rain-like sound
+            rainFilter = audioCtx.createBiquadFilter();
+            rainFilter.type = 'lowpass';
+            rainFilter.frequency.value = 400;
+            rainFilter.Q.value = 0.5;
+
+            // Additional high-pass to remove rumble
+            const highPass = audioCtx.createBiquadFilter();
+            highPass.type = 'highpass';
+            highPass.frequency.value = 80;
+
+            rainGain = audioCtx.createGain();
+            rainGain.gain.value = 0;
+
+            rainNode.connect(rainFilter);
+            rainFilter.connect(highPass);
+            highPass.connect(rainGain);
+            rainGain.connect(audioCtx.destination);
+
+            rainNode.start();
+
+            // Fade in
+            const now = audioCtx.currentTime;
+            rainGain.gain.setValueAtTime(0, now);
+            rainGain.gain.linearRampToValueAtTime(0.15, now + 3);
+        }
+
+        function stopRain() {
+            if (!rainNode) return;
+
+            const now = audioCtx.currentTime;
+            rainGain.gain.linearRampToValueAtTime(0, now + 2);
+
+            const nodeToStop = rainNode;
+            setTimeout(() => {
+                nodeToStop.stop();
+            }, 2500);
+
+            rainNode = null;
+            rainGain = null;
+            rainFilter = null;
+        }
+
+        function toggleRain() {
+            rainEnabled = !rainEnabled;
+
+            const toggle = document.getElementById('rainToggle');
+            const value = document.getElementById('rainValue');
+
+            toggle.classList.toggle('active', rainEnabled);
+            value.textContent = rainEnabled ? 'on' : 'off';
+
+            if (rainEnabled && audioInitialized) {
+                startRain();
+            } else {
+                stopRain();
+            }
         }
 
         function initAudio() {
@@ -1926,9 +2035,14 @@
                 cycleBinaural();
             }
 
-            // Pomodoro toggle
-            if (e.key.toLowerCase() === 'p' && !modeKeys[e.key.toLowerCase()]) {
+            // Pomodoro toggle (shift+P to avoid conflict with phrygian mode)
+            if (e.key === 'P' && e.shiftKey) {
                 togglePomodoro();
+            }
+
+            // Rain toggle
+            if (e.key.toLowerCase() === 'r') {
+                toggleRain();
             }
         });
 
@@ -2111,6 +2225,10 @@
         // Pomodoro control
         const pomodoroToggle = document.getElementById('pomodoroToggle');
         pomodoroToggle.addEventListener('click', togglePomodoro);
+
+        // Rain control
+        const rainToggle = document.getElementById('rainToggle');
+        rainToggle.addEventListener('click', toggleRain);
 
         // Share button
         const shareButton = document.getElementById('shareButton');
