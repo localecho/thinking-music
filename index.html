@@ -561,6 +561,70 @@
             color: var(--whisper);
             letter-spacing: 0.15em;
         }
+
+        /* Breathing guide */
+        .breathe-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+        }
+
+        .breathe-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .breathe-circle {
+            width: 120px;
+            height: 120px;
+            border: 2px solid var(--voice);
+            border-radius: 50%;
+            transition: transform 4s ease-in-out, border-color 4s ease;
+        }
+
+        .breathe-circle.inhale {
+            transform: scale(2);
+            border-color: var(--speak);
+        }
+
+        .breathe-circle.hold {
+            transform: scale(2);
+            border-color: var(--murmur);
+        }
+
+        .breathe-circle.exhale {
+            transform: scale(1);
+            border-color: var(--whisper);
+        }
+
+        .breathe-text {
+            margin-top: 48px;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: var(--voice);
+            letter-spacing: 0.2em;
+            transition: opacity 0.3s ease;
+        }
+
+        .breathe-dismiss {
+            position: fixed;
+            bottom: 48px;
+            font-size: 0.75rem;
+            font-style: italic;
+            color: var(--whisper);
+            letter-spacing: 0.15em;
+        }
     </style>
 </head>
 <body>
@@ -583,6 +647,13 @@
     <div class="session-timer" id="sessionTimer"></div>
     <div class="controls-hint" id="controlsHint">esc for controls</div>
 
+    <!-- Breathing guide overlay -->
+    <div class="breathe-overlay" id="breatheOverlay">
+        <div class="breathe-circle" id="breatheCircle"></div>
+        <div class="breathe-text" id="breatheText">inhale</div>
+        <div class="breathe-dismiss">press any key to exit</div>
+    </div>
+
     <!-- Help overlay -->
     <div class="help-overlay" id="helpOverlay">
         <div class="help-content">
@@ -592,12 +663,11 @@
                 <span class="help-key">t</span><span class="help-desc">theme</span>
                 <span class="help-key">f</span><span class="help-desc">fullscreen</span>
                 <span class="help-key">b</span><span class="help-desc">binaural α/θ/β</span>
+                <span class="help-key">g</span><span class="help-desc">breathe 4-7-8</span>
                 <span class="help-key">r</span><span class="help-desc">rain</span>
                 <span class="help-key">x</span><span class="help-desc">snow</span>
                 <span class="help-key">esc</span><span class="help-desc">controls</span>
                 <span class="help-key">?</span><span class="help-desc">this help</span>
-                <span class="help-key">c-b</span><span class="help-desc">root note</span>
-                <span class="help-key">d i l m a</span><span class="help-desc">modes</span>
             </div>
             <div class="help-dismiss">press any key</div>
         </div>
@@ -1899,17 +1969,33 @@
             updateSessionTimer();
         }
 
-        // Session timer
+        // Session timer & total stats
         const sessionTimer = document.getElementById('sessionTimer');
+        let totalListenTime = parseInt(localStorage.getItem('thinking-music-total-time') || '0');
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            if (hrs > 0) {
+                return `${hrs}h ${mins}m`;
+            }
+            return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+        }
+
         function updateSessionTimer() {
             if (!state.sessionStart) return;
 
             const elapsed = Math.floor((Date.now() - state.sessionStart) / 1000);
-            const mins = Math.floor(elapsed / 60);
-            const secs = elapsed % 60;
 
-            if (mins > 0) {
-                sessionTimer.textContent = `${mins}m ${secs.toString().padStart(2, '0')}s`;
+            if (elapsed > 0) {
+                // Save total time every 10 seconds
+                if (elapsed % 10 === 0) {
+                    totalListenTime++;
+                    localStorage.setItem('thinking-music-total-time', totalListenTime.toString());
+                }
+
+                sessionTimer.textContent = formatTime(elapsed);
                 sessionTimer.classList.add('visible');
             }
 
@@ -1933,6 +2019,61 @@
         }
 
         helpOverlay.addEventListener('click', hideHelp);
+
+        // Breathing guide
+        const breatheOverlay = document.getElementById('breatheOverlay');
+        const breatheCircle = document.getElementById('breatheCircle');
+        const breatheText = document.getElementById('breatheText');
+        let breatheVisible = false;
+        let breatheInterval = null;
+        let breathePhase = 0; // 0=inhale, 1=hold, 2=exhale, 3=hold
+
+        function startBreathe() {
+            breatheVisible = true;
+            breatheOverlay.classList.add('visible');
+            breathePhase = 0;
+            updateBreathe();
+        }
+
+        function stopBreathe() {
+            breatheVisible = false;
+            breatheOverlay.classList.remove('visible');
+            if (breatheInterval) {
+                clearTimeout(breatheInterval);
+                breatheInterval = null;
+            }
+            breatheCircle.classList.remove('inhale', 'hold', 'exhale');
+        }
+
+        function updateBreathe() {
+            if (!breatheVisible) return;
+
+            breatheCircle.classList.remove('inhale', 'hold', 'exhale');
+
+            // 4-7-8 breathing: inhale 4s, hold 7s, exhale 8s
+            const phases = [
+                { name: 'inhale', duration: 4000, class: 'inhale' },
+                { name: 'hold', duration: 7000, class: 'hold' },
+                { name: 'exhale', duration: 8000, class: 'exhale' },
+            ];
+
+            const phase = phases[breathePhase % 3];
+            breatheText.textContent = phase.name;
+            breatheCircle.classList.add(phase.class);
+
+            breathePhase++;
+            breatheInterval = setTimeout(updateBreathe, phase.duration);
+        }
+
+        function toggleBreathe() {
+            if (breatheVisible) {
+                stopBreathe();
+            } else {
+                startBreathe();
+            }
+        }
+
+        breatheOverlay.addEventListener('click', stopBreathe);
 
         // Intro overlay click
         introOverlay.addEventListener('click', startExperience);
@@ -1979,6 +2120,12 @@
             state.lastActivity = Date.now();
             state.mouseVelocity = Math.min(100, state.mouseVelocity + 20);
 
+            // Breathing guide - any key to dismiss
+            if (breatheVisible) {
+                stopBreathe();
+                return;
+            }
+
             // Help overlay - ? to show, any key to dismiss
             if (helpVisible) {
                 hideHelp();
@@ -1987,6 +2134,12 @@
 
             if (e.key === '?' || (e.shiftKey && e.key === '/')) {
                 toggleHelp();
+                return;
+            }
+
+            // Breathing guide toggle
+            if (e.key.toLowerCase() === 'g') {
+                toggleBreathe();
                 return;
             }
 
