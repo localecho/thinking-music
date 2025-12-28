@@ -498,6 +498,14 @@
             opacity: 1;
         }
 
+        /* Minimal mode - hide all chrome */
+        body.minimal .controls-hint,
+        body.minimal .session-timer,
+        body.minimal .controls {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
         /* Help overlay */
         .help-overlay {
             position: fixed;
@@ -665,8 +673,8 @@
                 <span class="help-key">b</span><span class="help-desc">binaural α/θ/β</span>
                 <span class="help-key">g</span><span class="help-desc">breathe 4-7-8</span>
                 <span class="help-key">r</span><span class="help-desc">rain</span>
+                <span class="help-key">shift+m</span><span class="help-desc">minimal</span>
                 <span class="help-key">x</span><span class="help-desc">snow</span>
-                <span class="help-key">esc</span><span class="help-desc">controls</span>
                 <span class="help-key">?</span><span class="help-desc">this help</span>
             </div>
             <div class="help-dismiss">press any key</div>
@@ -804,6 +812,52 @@
         if (savedTheme && themes.includes(savedTheme)) {
             currentThemeIndex = themes.indexOf(savedTheme);
             setTheme(savedTheme);
+        }
+
+        // Minimal mode
+        let minimalMode = false;
+        function toggleMinimal() {
+            minimalMode = !minimalMode;
+            document.body.classList.toggle('minimal', minimalMode);
+        }
+
+        // URL params for sharing state
+        function parseUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+
+            if (params.has('theme') && themes.includes(params.get('theme'))) {
+                currentThemeIndex = themes.indexOf(params.get('theme'));
+                setTheme(params.get('theme'));
+            }
+            if (params.has('key') && notes.includes(params.get('key'))) {
+                state.key = params.get('key');
+                state.homeKey = params.get('key');
+            }
+            if (params.has('mode')) {
+                const modeMap = {d: 'dorian', i: 'ionian', l: 'lydian', m: 'mixolydian', a: 'aeolian', p: 'phrygian'};
+                if (modeMap[params.get('mode')]) {
+                    state.mode = modeMap[params.get('mode')];
+                    state.homeMode = modeMap[params.get('mode')];
+                }
+            }
+            if (params.has('minimal') && params.get('minimal') === '1') {
+                toggleMinimal();
+            }
+            if (params.has('rain') && params.get('rain') === '1') {
+                // Will be activated after audio init
+                setTimeout(() => { if (audioInitialized && !rainEnabled) toggleRain(); }, 1000);
+            }
+        }
+
+        function getShareUrl() {
+            const params = new URLSearchParams();
+            params.set('theme', themes[currentThemeIndex]);
+            params.set('key', state.key);
+            const modeMap = {dorian: 'd', ionian: 'i', lydian: 'l', mixolydian: 'm', aeolian: 'a', phrygian: 'p'};
+            params.set('mode', modeMap[state.mode] || 'd');
+            if (minimalMode) params.set('minimal', '1');
+            if (rainEnabled) params.set('rain', '1');
+            return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
         }
         
         const noteFrequencies = {
@@ -1013,8 +1067,8 @@
         function startRain() {
             if (!audioInitialized || rainNode) return;
 
-            // Create brown noise using AudioWorklet-style approach
-            const bufferSize = 2 * audioCtx.sampleRate;
+            // Create brown noise - longer buffer to avoid loop detection
+            const bufferSize = 10 * audioCtx.sampleRate; // 10 seconds
             const noiseBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
 
             for (let channel = 0; channel < 2; channel++) {
@@ -2197,6 +2251,11 @@
             if (e.key.toLowerCase() === 'r') {
                 toggleRain();
             }
+
+            // Minimal mode (Shift+M to avoid conflict with mixolydian)
+            if (e.key === 'M' && e.shiftKey) {
+                toggleMinimal();
+            }
         });
 
         function toggleFullscreen() {
@@ -2383,12 +2442,12 @@
         const rainToggle = document.getElementById('rainToggle');
         rainToggle.addEventListener('click', toggleRain);
 
-        // Share button
+        // Share button (copies URL with current state)
         const shareButton = document.getElementById('shareButton');
         const shareValue = document.getElementById('shareValue');
         shareButton.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(window.location.href);
+                await navigator.clipboard.writeText(getShareUrl());
                 shareValue.textContent = 'copied!';
                 setTimeout(() => {
                     shareValue.textContent = 'copy link';
@@ -2400,6 +2459,9 @@
                 }, 2000);
             }
         });
+
+        // Parse URL params on load
+        parseUrlParams();
     </script>
 </body>
 </html>
