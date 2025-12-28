@@ -591,12 +591,13 @@
                 <span class="help-key">space</span><span class="help-desc">new chord</span>
                 <span class="help-key">t</span><span class="help-desc">theme</span>
                 <span class="help-key">f</span><span class="help-desc">fullscreen</span>
-                <span class="help-key">b</span><span class="help-desc">binaural</span>
+                <span class="help-key">b</span><span class="help-desc">binaural α/θ/β</span>
+                <span class="help-key">p</span><span class="help-desc">25min focus</span>
                 <span class="help-key">x</span><span class="help-desc">snow</span>
                 <span class="help-key">esc</span><span class="help-desc">controls</span>
                 <span class="help-key">?</span><span class="help-desc">this help</span>
                 <span class="help-key">c-b</span><span class="help-desc">root note</span>
-                <span class="help-key">d i l m a p</span><span class="help-desc">modes</span>
+                <span class="help-key">d i l m a</span><span class="help-desc">modes</span>
             </div>
             <div class="help-dismiss">press any key</div>
         </div>
@@ -639,6 +640,13 @@
 
         <div class="control-divider"></div>
 
+        <div class="text-control" id="pomodoroToggle">
+            <span class="control-name">focus</span>
+            <span class="control-value" id="pomodoroValue">off</span>
+        </div>
+
+        <div class="control-divider"></div>
+
         <div class="text-control active" id="shareButton">
             <span class="control-name">share</span>
             <span class="control-value" id="shareValue">copy link</span>
@@ -654,14 +662,27 @@
         let audioInitialized = false;
         let soundEnabled = true;
 
-        // Binaural beat system
+        // Binaural beat system with multiple modes
         let binauralEnabled = false;
         let binauralOscL = null;
         let binauralOscR = null;
         let binauralGainL = null;
         let binauralGainR = null;
         const binauralBaseFreq = 110; // A2 - low, unobtrusive
-        const binauralBeatFreq = 10;  // 10Hz = Alpha waves (relaxed focus)
+
+        const binauralModes = [
+            { name: 'off', freq: 0 },
+            { name: '10hz α', freq: 10 },   // Alpha: relaxed focus
+            { name: '6hz θ', freq: 6 },     // Theta: deep meditation
+            { name: '18hz β', freq: 18 },   // Beta: alert focus
+        ];
+        let binauralModeIndex = 0;
+
+        // Pomodoro/Focus mode
+        let pomodoroActive = false;
+        let pomodoroStart = null;
+        let pomodoroInterval = null;
+        const POMODORO_DURATION = 25 * 60 * 1000; // 25 minutes
 
         // Theme system
         const themes = ['fog', 'amber', 'blue', 'oled'];
@@ -742,7 +763,7 @@
             'Q7': [0, 5, 10, 15],           // Extended quartal
         };
         
-        function startBinaural() {
+        function startBinaural(beatFreq = 10) {
             if (!audioInitialized || binauralOscL) return;
 
             // Left ear: base frequency
@@ -763,7 +784,7 @@
             // Right ear: base + beat frequency
             binauralOscR = audioCtx.createOscillator();
             binauralOscR.type = 'sine';
-            binauralOscR.frequency.value = binauralBaseFreq + binauralBeatFreq;
+            binauralOscR.frequency.value = binauralBaseFreq + beatFreq;
 
             binauralGainR = audioCtx.createGain();
             binauralGainR.gain.value = 0;
@@ -801,19 +822,95 @@
             }, 2500);
         }
 
-        function toggleBinaural() {
-            binauralEnabled = !binauralEnabled;
+        function cycleBinaural() {
+            stopBinaural();
+            binauralModeIndex = (binauralModeIndex + 1) % binauralModes.length;
+            const mode = binauralModes[binauralModeIndex];
+
             const toggle = document.getElementById('binauralToggle');
             const value = document.getElementById('binauralValue');
 
+            binauralEnabled = mode.freq > 0;
             toggle.classList.toggle('active', binauralEnabled);
-            value.textContent = binauralEnabled ? '10hz α' : 'off';
+            value.textContent = mode.name;
 
             if (binauralEnabled && audioInitialized) {
-                startBinaural();
-            } else {
-                stopBinaural();
+                startBinaural(mode.freq);
             }
+        }
+
+        // Pomodoro/Focus mode
+        function startPomodoro() {
+            pomodoroActive = true;
+            pomodoroStart = Date.now();
+
+            const toggle = document.getElementById('pomodoroToggle');
+            const value = document.getElementById('pomodoroValue');
+            toggle.classList.add('active');
+
+            // Reset journey for focus session
+            state.sessionStart = Date.now();
+            state.journeyPhase = 0;
+            state.arrived = false;
+            field.classList.remove('arrived');
+
+            // Update timer display
+            updatePomodoroTimer();
+        }
+
+        function stopPomodoro() {
+            pomodoroActive = false;
+            pomodoroStart = null;
+            if (pomodoroInterval) {
+                clearInterval(pomodoroInterval);
+                pomodoroInterval = null;
+            }
+
+            const toggle = document.getElementById('pomodoroToggle');
+            const value = document.getElementById('pomodoroValue');
+            toggle.classList.remove('active');
+            value.textContent = 'off';
+        }
+
+        function togglePomodoro() {
+            if (pomodoroActive) {
+                stopPomodoro();
+            } else {
+                startPomodoro();
+            }
+        }
+
+        function updatePomodoroTimer() {
+            if (!pomodoroActive || !pomodoroStart) return;
+
+            const elapsed = Date.now() - pomodoroStart;
+            const remaining = Math.max(0, POMODORO_DURATION - elapsed);
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+
+            const value = document.getElementById('pomodoroValue');
+            value.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+            // Override journey phase based on pomodoro progress
+            state.journeyPhase = Math.min(1, elapsed / POMODORO_DURATION);
+
+            // Pomodoro complete!
+            if (remaining <= 0) {
+                value.textContent = 'done ✓';
+                pomodoroActive = false;
+
+                // Trigger arrival
+                if (!state.arrived) {
+                    state.arrived = true;
+                    state.key = state.homeKey;
+                    state.mode = state.homeMode;
+                    field.classList.add('arrived');
+                    playPedalTone(state.homeKey);
+                }
+                return;
+            }
+
+            pomodoroInterval = setTimeout(updatePomodoroTimer, 1000);
         }
 
         function initAudio() {
@@ -1824,9 +1921,14 @@
                 toggleFullscreen();
             }
 
-            // Binaural toggle
+            // Binaural cycle
             if (e.key.toLowerCase() === 'b') {
-                toggleBinaural();
+                cycleBinaural();
+            }
+
+            // Pomodoro toggle
+            if (e.key.toLowerCase() === 'p' && !modeKeys[e.key.toLowerCase()]) {
+                togglePomodoro();
             }
         });
 
@@ -2002,9 +2104,13 @@
         const themeControl = document.getElementById('themeControl');
         themeControl.addEventListener('click', cycleTheme);
 
-        // Binaural control
+        // Binaural control (cycles through modes)
         const binauralToggle = document.getElementById('binauralToggle');
-        binauralToggle.addEventListener('click', toggleBinaural);
+        binauralToggle.addEventListener('click', cycleBinaural);
+
+        // Pomodoro control
+        const pomodoroToggle = document.getElementById('pomodoroToggle');
+        pomodoroToggle.addEventListener('click', togglePomodoro);
 
         // Share button
         const shareButton = document.getElementById('shareButton');
